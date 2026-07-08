@@ -1,12 +1,16 @@
 // Preferences + per-document settings + custom CSS (a Dynalist-Pro touch).
 import Modal from './Modal';
 import { useStore } from '../store/store';
+import { fsSupported } from '../lib/fileStore';
 
 const ACCENTS = ['#4ec9b0', '#569cd6', '#c586c0', '#dcdcaa', '#ce9178', '#6a9955', '#f44747'];
 
 export default function SettingsModal({ onClose }: { onClose: () => void }) {
   const prefs = useStore((s) => s.preferences);
   const doc = useStore((s) => (s.currentDocId ? s.docs[s.currentDocId] : null));
+  const fileConnected = useStore((s) => s.fileConnected);
+  const fileName = useStore((s) => s.fileName);
+  const fileNeedsReconnect = useStore((s) => s.fileNeedsReconnect);
   const set = useStore.getState().setPreferences;
 
   return (
@@ -101,6 +105,61 @@ export default function SettingsModal({ onClose }: { onClose: () => void }) {
         </section>
 
         <section>
+          <h3>Data file (survives a browser wipe)</h3>
+          {fsSupported() ? (
+            <>
+              {fileConnected ? (
+                <>
+                  <p className="muted">
+                    Auto-saving to <strong>{fileName}</strong>. Your notes live in this file on
+                    disk — clearing browser data won't touch them.
+                  </p>
+                  <div className="io-buttons">
+                    <button className="btn" onClick={() => void useStore.getState().disconnectFile()}>
+                      Disconnect
+                    </button>
+                  </div>
+                </>
+              ) : fileNeedsReconnect ? (
+                <>
+                  <p className="muted">
+                    A data file (<strong>{fileName}</strong>) is remembered but disconnected.
+                  </p>
+                  <div className="io-buttons">
+                    <button className="btn primary" onClick={() => void useStore.getState().reconnectFile()}>
+                      Reconnect {fileName}
+                    </button>
+                    <button className="btn" onClick={() => useStore.getState().disconnectFile()}>
+                      Forget
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <p className="muted">
+                    Connect a file on disk and the app auto-saves to it — the durable, portable
+                    home for your notes.
+                  </p>
+                  <div className="io-buttons">
+                    <button className="btn primary" onClick={() => void useStore.getState().connectFile()}>
+                      Save to a file…
+                    </button>
+                    <button className="btn" onClick={() => void useStore.getState().openFile()}>
+                      Open existing file…
+                    </button>
+                  </div>
+                </>
+              )}
+            </>
+          ) : (
+            <p className="muted">
+              Your browser doesn't support connecting a file. Use Import / Export → Download
+              backup to keep a durable copy.
+            </p>
+          )}
+        </section>
+
+        <section>
           <h3>Data</h3>
           <p className="muted">
             Everything is stored locally in your browser (IndexedDB). Nothing is sent anywhere.
@@ -110,6 +169,7 @@ export default function SettingsModal({ onClose }: { onClose: () => void }) {
             onClick={() => {
               if (confirm('Erase ALL documents and start fresh? This cannot be undone.')) {
                 indexedDB.deleteDatabase('outliner');
+                indexedDB.deleteDatabase('outliner-fs');
                 localStorage.removeItem('outliner:backup');
                 location.reload();
               }

@@ -16,6 +16,24 @@ import { findItemByTitle } from './store/selectors';
 
 type ModalKind = null | 'palette' | 'search' | 'help' | 'settings' | 'io';
 
+/** Shown when a remembered data file needs a fresh permission click after reload. */
+function ReconnectBanner() {
+  const needs = useStore((s) => s.fileNeedsReconnect);
+  const fileName = useStore((s) => s.fileName);
+  if (!needs) return null;
+  return (
+    <div className="reconnect-banner">
+      <span>
+        🔒 Your data file <strong>{fileName}</strong> is disconnected. Reconnect to load and
+        keep auto-saving to it.
+      </span>
+      <button className="btn primary" onClick={() => void useStore.getState().reconnectFile()}>
+        Reconnect
+      </button>
+    </div>
+  );
+}
+
 export default function App() {
   const loaded = useStore((s) => s.loaded);
   const prefs = useStore((s) => s.preferences);
@@ -30,7 +48,11 @@ export default function App() {
   const pendingAttach = useRef<string | null>(null);
 
   useEffect(() => {
-    void useStore.getState().hydrate();
+    // Load local data, then restore a connected file (if any) on top.
+    void useStore
+      .getState()
+      .hydrate()
+      .then(() => useStore.getState().tryRestoreFile());
     // Ask the browser to keep our IndexedDB data instead of evicting it under
     // storage pressure — this app's whole point is to not lose your notes.
     void navigator.storage?.persist?.();
@@ -169,6 +191,7 @@ export default function App() {
           </button>
         )}
         <main className="main">
+          <ReconnectBanner />
           <DocumentView />
         </main>
 

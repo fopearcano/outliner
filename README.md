@@ -85,11 +85,23 @@ or just keep running it locally.
 
 ## Privacy & data
 
-- All documents are stored in **IndexedDB** in your browser, mirrored to
+- All documents are stored in **IndexedDB** in your browser, keyed to the app's
+  origin (so it stays put across code updates as long as you open the same
+  URL — the dev and preview servers are both pinned to `:5273`). Mirrored to
   `localStorage` as a safety net. Nothing is ever sent over the network.
-- Auto‑saved (debounced) on every change.
-- Use **Import / Export → Download backup** for a portable JSON snapshot, or
-  **Settings → Erase all data** to start fresh.
+- Auto‑saved (debounced) on every change. The app also requests **persistent
+  storage** so the browser won't evict your data under disk pressure.
+- **Connect a file (recommended for keeps):** *Settings → Data file → Save to a
+  file…* lets you pick a real `outliner.json` on disk that the app auto‑saves to
+  and remembers across reloads. Your notes then live in a folder you own and
+  **survive clearing browser data entirely.** (Chrome/Edge desktop; other
+  browsers fall back to IndexedDB.)
+- Use **Import / Export → Download backup** for a portable JSON snapshot anytime,
+  or **Settings → Erase all data** to start fresh.
+
+> Browser storage alone is only as durable as your browser profile — clearing
+> site data, a different browser/profile, or incognito will not see it. Connect a
+> file, or keep backups, for anything you can't lose.
 
 ---
 

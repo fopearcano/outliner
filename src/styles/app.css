@@ -1280,6 +1280,25 @@ textarea.node-note {
   background: var(--bg-elev);
 }
 
+/* --------------------------- Reconnect banner ------------------------- */
+.reconnect-banner {
+  max-width: 900px;
+  margin: 12px auto 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  justify-content: space-between;
+  background: color-mix(in srgb, var(--tok-yellow) 14%, var(--bg-elev2));
+  border: 1px solid color-mix(in srgb, var(--tok-yellow) 45%, var(--border));
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-size: 13px;
+  color: var(--text);
+}
+.reconnect-banner .btn {
+  flex-shrink: 0;
+}
+
 /* --------------------------- File drop target ------------------------- */
 .node-row.file-over {
   box-shadow: inset 0 0 0 1px var(--accent);

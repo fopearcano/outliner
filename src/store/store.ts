@@ -27,6 +27,18 @@ import {
 import { newId } from '../lib/id';
 import { loadState, saveState, debounce } from '../lib/persistence';
 import type { ImportNode } from '../lib/importers';
+import {
+  fsSupported,
+  pickSaveFile,
+  pickOpenFile,
+  loadHandle,
+  saveHandle,
+  clearHandle,
+  queryPermission,
+  requestPermission,
+  readFileState,
+  writeFileState,
+} from '../lib/fileStore';
 
 export type CaretPos = 'start' | 'end';
 
@@ -67,8 +79,23 @@ export interface StoreState {
   redoStack: Snapshot[];
   clipboard: Clipboard | null;
 
+  // --- connected data file (File System Access) ---
+  fileName: string | null;
+  fileConnected: boolean;
+  fileNeedsReconnect: boolean;
+
   // --- lifecycle ---
   hydrate: () => Promise<void>;
+  /** Restore a previously-connected data file after hydrate. */
+  tryRestoreFile: () => Promise<void>;
+  /** Save current data to a new file and connect it (auto-save from now on). */
+  connectFile: () => Promise<boolean>;
+  /** Open an existing outliner.json, load it, and connect it. */
+  openFile: () => Promise<boolean>;
+  /** Re-grant permission to a remembered file after a reload. */
+  reconnectFile: () => Promise<boolean>;
+  /** Stop syncing to the file (data stays in the browser). */
+  disconnectFile: () => void;
 
   // --- focus ---
   requestFocus: (id: string, pos?: CaretPos | number, note?: boolean) => void;
@@ -141,6 +168,18 @@ const HISTORY_LIMIT = 200;
 let lastEditItem: string | null = null;
 let lastEditTs = 0;
 
+// The connected data file, if any (File System Access). Kept outside React
+// state because a handle is not something the UI renders directly.
+let currentHandle: FileSystemFileHandle | null = null;
+
+/** Backfill fields that may be missing from older / imported data. */
+function normalizeItems(items: ItemMap): ItemMap {
+  for (const id in items) {
+    if (!items[id].attachments) items[id] = { ...items[id], attachments: [] };
+  }
+  return items;
+}
+
 function snapshot(s: StoreState): Snapshot {
   return { items: s.items, docs: s.docs, rootDocIds: s.rootDocIds };
 }
@@ -175,6 +214,30 @@ export const useStore = create<StoreState>((set, get) => {
 
   const touch = (item: OutlineItem): OutlineItem => ({ ...item, modifiedAt: Date.now() });
 
+  /** Replace the whole document graph from a persisted snapshot (file load). */
+  const applyPersisted = (p: PersistedState) => {
+    set({
+      items: normalizeItems({ ...p.items }),
+      docs: p.docs,
+      rootDocIds: p.rootDocIds,
+      currentDocId: p.currentDocId ?? p.rootDocIds[0] ?? null,
+      preferences: { ...DEFAULT_PREFERENCES, ...p.preferences },
+      zoomItemId: null,
+      filterQuery: '',
+      undoStack: [],
+      redoStack: [],
+    });
+  };
+
+  const currentPersisted = (s: StoreState): PersistedState => ({
+    version: STATE_VERSION,
+    items: s.items,
+    docs: s.docs,
+    rootDocIds: s.rootDocIds,
+    currentDocId: s.currentDocId,
+    preferences: s.preferences,
+  });
+
   return {
     items: {},
     docs: {},
@@ -188,18 +251,15 @@ export const useStore = create<StoreState>((set, get) => {
     undoStack: [],
     redoStack: [],
     clipboard: null,
+    fileName: null,
+    fileConnected: false,
+    fileNeedsReconnect: false,
 
     hydrate: async () => {
       const persisted = await loadState();
       if (persisted && persisted.rootDocIds.length) {
-        // Backfill fields added in later versions so the rest of the app can
-        // assume they exist (e.g. attachments on items saved before that field).
-        const items = persisted.items;
-        for (const id in items) {
-          if (!items[id].attachments) items[id] = { ...items[id], attachments: [] };
-        }
         set({
-          items,
+          items: normalizeItems({ ...persisted.items }),
           docs: persisted.docs,
           rootDocIds: persisted.rootDocIds,
           currentDocId: persisted.currentDocId ?? persisted.rootDocIds[0] ?? null,
@@ -211,6 +271,63 @@ export const useStore = create<StoreState>((set, get) => {
         const seed = createSeed();
         set({ ...seed, loaded: true });
       }
+    },
+
+    // ------------------------------------------------------- connected file
+    tryRestoreFile: async () => {
+      if (!fsSupported()) return;
+      const handle = await loadHandle();
+      if (!handle) return;
+      currentHandle = handle;
+      const perm = await queryPermission(handle);
+      if (perm === 'granted') {
+        const state = await readFileState(handle);
+        if (state && state.rootDocIds?.length) applyPersisted(state);
+        set({ fileName: handle.name, fileConnected: true, fileNeedsReconnect: false });
+      } else {
+        // Needs a click to re-grant read/write after a reload.
+        set({ fileName: handle.name, fileConnected: false, fileNeedsReconnect: true });
+      }
+    },
+
+    connectFile: async () => {
+      if (!fsSupported()) return false;
+      const handle = await pickSaveFile();
+      if (!handle) return false;
+      currentHandle = handle;
+      await writeFileState(handle, currentPersisted(get()));
+      await saveHandle(handle);
+      set({ fileName: handle.name, fileConnected: true, fileNeedsReconnect: false });
+      return true;
+    },
+
+    openFile: async () => {
+      if (!fsSupported()) return false;
+      const handle = await pickOpenFile();
+      if (!handle) return false;
+      if (!(await requestPermission(handle))) return false;
+      const state = await readFileState(handle);
+      currentHandle = handle;
+      await saveHandle(handle);
+      if (state && state.rootDocIds?.length) applyPersisted(state);
+      set({ fileName: handle.name, fileConnected: true, fileNeedsReconnect: false });
+      return true;
+    },
+
+    reconnectFile: async () => {
+      if (!currentHandle) currentHandle = await loadHandle();
+      if (!currentHandle) return false;
+      if (!(await requestPermission(currentHandle))) return false;
+      const state = await readFileState(currentHandle);
+      if (state && state.rootDocIds?.length) applyPersisted(state);
+      set({ fileName: currentHandle.name, fileConnected: true, fileNeedsReconnect: false });
+      return true;
+    },
+
+    disconnectFile: () => {
+      currentHandle = null;
+      void clearHandle();
+      set({ fileConnected: false, fileName: null, fileNeedsReconnect: false });
     },
 
     requestFocus: (id, pos = 'end', note = false) =>
@@ -1062,17 +1179,24 @@ function createSeed(): Partial<StoreState> {
 
 // --------------------------------------------------------------------------
 // Persistence: debounced auto-save whenever the persisted slice changes.
+// IndexedDB is always written (fast local cache); a connected file is written
+// too (the durable, portable copy).
 // --------------------------------------------------------------------------
 const persist = debounce((state: PersistedState) => void saveState(state), 400);
+const persistFile = debounce((state: PersistedState) => {
+  if (currentHandle) void writeFileState(currentHandle, state);
+}, 900);
 
 useStore.subscribe((s) => {
   if (!s.loaded) return;
-  persist({
+  const state: PersistedState = {
     version: STATE_VERSION,
     items: s.items,
     docs: s.docs,
     rootDocIds: s.rootDocIds,
     currentDocId: s.currentDocId,
     preferences: s.preferences,
-  });
+  };
+  persist(state);
+  persistFile(state);
 });
