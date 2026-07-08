@@ -31,6 +31,9 @@ export default function App() {
 
   useEffect(() => {
     void useStore.getState().hydrate();
+    // Ask the browser to keep our IndexedDB data instead of evicting it under
+    // storage pressure — this app's whole point is to not lose your notes.
+    void navigator.storage?.persist?.();
   }, []);
 
   // Apply the active theme to the document root.
