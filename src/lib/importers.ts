@@ -3,6 +3,8 @@
 // splice in. Indentation-based formats use a stack keyed on indent width.
 // ---------------------------------------------------------------------------
 
+import type { Attachment } from '../types';
+
 export interface ImportNode {
   text: string;
   note?: string;
@@ -11,6 +13,7 @@ export interface ImportNode {
   collapsed?: boolean;
   heading?: number;
   color?: string | null;
+  attachments?: Attachment[];
   children: ImportNode[];
 }
 
@@ -143,6 +146,7 @@ export function importJson(json: string): ImportNode[] {
     if (o.collapsed) node.collapsed = true;
     if (typeof o.heading === 'number') node.heading = o.heading;
     if (typeof o.color === 'string') node.color = o.color;
+    if (Array.isArray(o.attachments)) node.attachments = o.attachments as Attachment[];
     if (Array.isArray(o.children)) node.children = o.children.map(convert);
     return node;
   };

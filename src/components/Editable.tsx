@@ -17,13 +17,15 @@ interface EditableProps {
   onKeyDown?: (e: React.KeyboardEvent<HTMLDivElement>) => void;
   onFocus?: (e: React.FocusEvent<HTMLDivElement>) => void;
   onBlur?: (e: React.FocusEvent<HTMLDivElement>) => void;
+  /** Called with any files present on paste (images pasted from clipboard, etc). */
+  onFiles?: (files: File[]) => void;
   className?: string;
   placeholder?: string;
   spellCheck?: boolean;
 }
 
 export const Editable = forwardRef<EditableHandle, EditableProps>(function Editable(
-  { value, onInput, onKeyDown, onFocus, onBlur, className, placeholder, spellCheck },
+  { value, onInput, onKeyDown, onFocus, onBlur, onFiles, className, placeholder, spellCheck },
   ref,
 ) {
   const elRef = useRef<HTMLDivElement>(null);
@@ -54,6 +56,13 @@ export const Editable = forwardRef<EditableHandle, EditableProps>(function Edita
   }, [value]);
 
   const handlePaste = (e: React.ClipboardEvent<HTMLDivElement>) => {
+    // If the clipboard carries files (e.g. a pasted image), attach them.
+    const files = Array.from(e.clipboardData.files ?? []);
+    if (files.length && onFiles) {
+      e.preventDefault();
+      onFiles(files);
+      return;
+    }
     e.preventDefault();
     const text = e.clipboardData.getData('text/plain').replace(/\r?\n/g, ' ');
     document.execCommand('insertText', false, text);

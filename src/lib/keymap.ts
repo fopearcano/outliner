@@ -47,6 +47,7 @@ export const SHORTCUTS: ShortcutGroup[] = [
       { keys: `${mod}+P`, desc: 'Command palette' },
       { keys: `${mod}+K`, desc: 'Search all documents' },
       { keys: `${mod}+F`, desc: 'Filter current document' },
+      { keys: `${mod}+\\`, desc: 'Show / hide sidebar' },
     ],
   },
   {
@@ -55,6 +56,7 @@ export const SHORTCUTS: ShortcutGroup[] = [
       { keys: `${mod}+Z`, desc: 'Undo' },
       { keys: `${mod}+Shift+Z`, desc: 'Redo' },
       { keys: `${mod}+C / X / V`, desc: 'Copy / cut / paste bullet subtree' },
+      { keys: 'Drag / paste files', desc: 'Attach images & files to a bullet' },
       { keys: `${mod}+/`, desc: 'Show this help' },
       { keys: 'Esc', desc: 'Close dialogs / clear filter' },
     ],

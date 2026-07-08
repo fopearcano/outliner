@@ -92,6 +92,9 @@ export default function ContextMenu({ itemId, x, y, onClose }: Props) {
       <button className="ctx-item" onClick={act(() => ui.openDatePicker(itemId, null, null))}>
         Set date…
       </button>
+      <button className="ctx-item" onClick={act(() => ui.attachTo(itemId))}>
+        Attach image / file…
+      </button>
       <button className="ctx-item" onClick={act(() => ui.openMoveDialog(itemId))}>
         Move to document…
       </button>

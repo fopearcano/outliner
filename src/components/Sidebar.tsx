@@ -42,6 +42,13 @@ export default function Sidebar() {
           <button className="icon-btn" title="Search everything (Ctrl/Cmd+K)" onClick={ui.openSearch}>
             ⌕
           </button>
+          <button
+            className="icon-btn"
+            title="Hide sidebar (Ctrl/Cmd+\)"
+            onClick={() => useStore.getState().setPreferences({ sidebarVisible: false })}
+          >
+            ⇤
+          </button>
         </div>
       </div>
 

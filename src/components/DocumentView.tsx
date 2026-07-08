@@ -8,6 +8,7 @@ import { ancestorIds } from '../lib/tree';
 import { parseQuery, matchItem } from '../lib/search';
 import { plainText, renderInline } from '../lib/markdown';
 import { useUi } from './ui-context';
+import ViewOptions from './ViewOptions';
 
 export default function DocumentView() {
   const doc = useStore((s) => (s.currentDocId ? s.docs[s.currentDocId] : null));
@@ -79,6 +80,7 @@ export default function DocumentView() {
         ))}
         <div className="breadcrumb-spacer" />
         <FilterBar />
+        <ViewOptions />
       </div>
 
       {zoomItem ? (

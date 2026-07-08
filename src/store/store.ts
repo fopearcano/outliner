@@ -8,6 +8,7 @@ import {
   type Doc,
   type Preferences,
   type ColorLabel,
+  type Attachment,
   type PersistedState,
   DEFAULT_PREFERENCES,
   DEFAULT_DOC_SETTINGS,
@@ -102,6 +103,8 @@ export interface StoreState {
   cycleHeading: (id: string) => void;
   setHeading: (id: string, level: number) => void;
   setColor: (id: string, color: ColorLabel | null) => void;
+  addAttachments: (id: string, attachments: Attachment[]) => void;
+  removeAttachment: (id: string, attachmentId: string) => void;
   duplicateItem: (id: string) => void;
   moveItemToDoc: (id: string, docId: string) => void;
 
@@ -189,8 +192,14 @@ export const useStore = create<StoreState>((set, get) => {
     hydrate: async () => {
       const persisted = await loadState();
       if (persisted && persisted.rootDocIds.length) {
+        // Backfill fields added in later versions so the rest of the app can
+        // assume they exist (e.g. attachments on items saved before that field).
+        const items = persisted.items;
+        for (const id in items) {
+          if (!items[id].attachments) items[id] = { ...items[id], attachments: [] };
+        }
         set({
-          items: persisted.items,
+          items,
           docs: persisted.docs,
           rootDocIds: persisted.rootDocIds,
           currentDocId: persisted.currentDocId ?? persisted.rootDocIds[0] ?? null,
@@ -727,6 +736,38 @@ export const useStore = create<StoreState>((set, get) => {
       });
     },
 
+    addAttachments: (id, attachments) => {
+      if (!attachments.length) return;
+      pushHistory();
+      set((s) => {
+        const item = s.items[id];
+        if (!item) return {};
+        return {
+          items: {
+            ...s.items,
+            [id]: touch({ ...item, attachments: [...(item.attachments ?? []), ...attachments] }),
+          },
+        };
+      });
+    },
+
+    removeAttachment: (id, attachmentId) => {
+      pushHistory();
+      set((s) => {
+        const item = s.items[id];
+        if (!item) return {};
+        return {
+          items: {
+            ...s.items,
+            [id]: touch({
+              ...item,
+              attachments: (item.attachments ?? []).filter((a) => a.id !== attachmentId),
+            }),
+          },
+        };
+      });
+    },
+
     duplicateItem: (id) => {
       pushHistory();
       set((s) => {
@@ -952,6 +993,7 @@ function buildImportItems(
       node.color && (COLOR_LABELS as string[]).includes(node.color)
         ? (node.color as OutlineItem['color'])
         : null;
+    if (Array.isArray(node.attachments)) it.attachments = node.attachments;
     items[it.id] = it;
     it.children = (node.children ?? []).map((c) => build(c, it.id));
     return it.id;

@@ -13,6 +13,8 @@ export interface UiApi {
   openContextMenu: (itemId: string, x: number, y: number) => void;
   /** Open the "move to document" dialog for an item. */
   openMoveDialog: (itemId: string) => void;
+  /** Open a file picker and attach the chosen files to an item. */
+  attachTo: (itemId: string) => void;
   /** App-level overlays. */
   openSearch: () => void;
   openPalette: () => void;

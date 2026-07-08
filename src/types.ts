@@ -27,8 +27,23 @@ export interface OutlineItem {
   heading: number;
   /** Named color label, or null. Maps to a palette entry. */
   color: ColorLabel | null;
+  /** Image / file attachments (stored inline as data URLs). */
+  attachments: Attachment[];
   createdAt: number;
   modifiedAt: number;
+}
+
+/** An image or file attached to a bullet, stored locally as a data URL. */
+export interface Attachment {
+  id: string;
+  name: string;
+  /** MIME type, e.g. "image/png" or "application/pdf". */
+  type: string;
+  /** Size in bytes of the original file. */
+  size: number;
+  /** Base64 data URL — keeps everything local, no server needed. */
+  dataUrl: string;
+  createdAt: number;
 }
 
 export type ColorLabel =
@@ -85,6 +100,15 @@ export const DEFAULT_DOC_SETTINGS: DocSettings = {
   numbered: false,
 };
 
+/** Available color themes. */
+export type ThemeName = 'dark' | 'darker' | 'light';
+
+export const THEMES: { id: ThemeName; label: string; accent: string }[] = [
+  { id: 'dark', label: 'Dark', accent: '#4ec9b0' },
+  { id: 'darker', label: 'Darker', accent: '#4ec9b0' },
+  { id: 'light', label: 'Light', accent: '#267f99' },
+];
+
 /** Global app preferences (persisted). */
 export interface Preferences {
   /** Extra user CSS injected into the app (Pro "custom CSS"). */
@@ -93,8 +117,16 @@ export interface Preferences {
   fontSize: number;
   /** Accent color used across the UI. */
   accent: string;
+  /** Active color theme. */
+  theme: ThemeName;
   /** Show completed items or hide them. */
   showCompleted: boolean;
+  /** Show notes under bullets. */
+  showNotes: boolean;
+  /** Tighter vertical spacing. */
+  compact: boolean;
+  /** Whether the left sidebar is visible. */
+  sidebarVisible: boolean;
   /** Spellcheck inside the editor. */
   spellcheck: boolean;
 }
@@ -103,7 +135,11 @@ export const DEFAULT_PREFERENCES: Preferences = {
   customCss: '',
   fontSize: 15,
   accent: '#4ec9b0',
+  theme: 'dark',
   showCompleted: true,
+  showNotes: true,
+  compact: false,
+  sidebarVisible: true,
   spellcheck: false,
 };
 

@@ -111,6 +111,7 @@ export function makeItem(parent: string | null, blank: Blank = {}): OutlineItem 
     completed: false,
     heading: 0,
     color: null,
+    attachments: [],
     createdAt: now,
     modifiedAt: now,
   };

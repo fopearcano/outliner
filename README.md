@@ -43,10 +43,22 @@ telemetry — your notes never leave the machine.
 - **Command palette** (`Ctrl/⌘+P`)
 
 ### Pro touches
+- **Image & file attachments** — drag a file onto a bullet, paste an image, or
+  use *Attach* in the context menu. Images render inline; other files become
+  download chips. Stored locally as data URLs, so they stay private and survive
+  reloads.
 - **Import**: OPML, Markdown, plain text, JSON
-- **Export**: OPML, Markdown, plain text, JSON — plus a full **backup** file
+- **Export**: OPML, Markdown, plain text, JSON (attachments included) — plus a
+  full **backup** file
 - **Custom CSS**, adjustable font size and accent color
 - **Checkbox mode** & **numbered lists** per document
+
+### Views & themes
+- **Three themes** — Dark (VSCode “Dark+”), Darker (near-black), and Light
+  (VSCode “Light+”) — switchable from the **View** menu
+- **View options** popover: show/hide completed items, show/hide notes, compact
+  spacing, font size, and per-document settings
+- **Collapsible sidebar** (`Ctrl/⌘+\`) for a distraction-free full-width outline
 
 Press `Ctrl/⌘+/` in the app for the full shortcut reference.
 

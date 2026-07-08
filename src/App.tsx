@@ -1,5 +1,6 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useStore } from './store/store';
+import { readFiles } from './lib/attachments';
 import Sidebar from './components/Sidebar';
 import DocumentView from './components/DocumentView';
 import CommandPalette from './components/CommandPalette';
@@ -25,9 +26,30 @@ export default function App() {
   const [ctxMenu, setCtxMenu] = useState<{ itemId: string; x: number; y: number } | null>(null);
   const [moveItem, setMoveItem] = useState<string | null>(null);
 
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const pendingAttach = useRef<string | null>(null);
+
   useEffect(() => {
     void useStore.getState().hydrate();
   }, []);
+
+  // Apply the active theme to the document root.
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', prefs.theme);
+    document.documentElement.style.colorScheme = prefs.theme === 'light' ? 'light' : 'dark';
+  }, [prefs.theme]);
+
+  const onFilePicked = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    const target = pendingAttach.current;
+    if (files && files.length && target) {
+      const { attachments, errors } = await readFiles(files);
+      if (attachments.length) useStore.getState().addAttachments(target, attachments);
+      if (errors.length) alert(errors.join('\n'));
+    }
+    e.target.value = '';
+    pendingAttach.current = null;
+  };
 
   // Apply custom CSS.
   useEffect(() => {
@@ -53,6 +75,10 @@ export default function App() {
       openDatePicker: (itemId, token) => setDatePicker({ itemId, token }),
       openContextMenu: (itemId, x, y) => setCtxMenu({ itemId, x, y }),
       openMoveDialog: (itemId) => setMoveItem(itemId),
+      attachTo: (itemId) => {
+        pendingAttach.current = itemId;
+        fileInputRef.current?.click();
+      },
       openSearch: () => {
         setSearchSeed('');
         setModal('search');
@@ -94,6 +120,10 @@ export default function App() {
     } else if (k === ',') {
       e.preventDefault();
       useStore.getState().zoomOut();
+    } else if (k === '\\') {
+      e.preventDefault();
+      const cur = useStore.getState().preferences.sidebarVisible;
+      useStore.getState().setPreferences({ sidebarVisible: !cur });
     }
   }, []);
 
@@ -116,13 +146,36 @@ export default function App() {
     ['--accent' as string]: prefs.accent,
   } as React.CSSProperties;
 
+  const appClass =
+    'app' +
+    (prefs.sidebarVisible ? '' : ' sidebar-hidden') +
+    (prefs.compact ? ' compact' : '') +
+    (prefs.showNotes ? '' : ' hide-notes');
+
   return (
     <UiContext.Provider value={ui}>
-      <div className="app" style={rootStyle}>
-        <Sidebar />
+      <div className={appClass} style={rootStyle}>
+        {prefs.sidebarVisible && <Sidebar />}
+        {!prefs.sidebarVisible && (
+          <button
+            className="sidebar-reveal"
+            title="Show sidebar (Ctrl/⌘ \)"
+            onClick={() => useStore.getState().setPreferences({ sidebarVisible: true })}
+          >
+            ⌗
+          </button>
+        )}
         <main className="main">
           <DocumentView />
         </main>
+
+        <input
+          ref={fileInputRef}
+          type="file"
+          multiple
+          style={{ display: 'none' }}
+          onChange={onFilePicked}
+        />
 
         {modal === 'palette' && <CommandPalette onClose={() => setModal(null)} />}
         {modal === 'search' && <SearchPanel onClose={() => setModal(null)} seed={searchSeed} />}

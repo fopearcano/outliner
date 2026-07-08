@@ -40,12 +40,76 @@
   --c-pink: #d16d9e;
   --c-gray: #858585;
 
+  --hl-bg: rgba(220, 220, 170, 0.22);
+  --sel-text: #ffffff;
+
   --font-mono: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', 'SF Mono', 'Menlo',
     'Consolas', ui-monospace, monospace;
   --font-size: 15px;
 
   --radius: 6px;
   --shadow: 0 8px 30px rgba(0, 0, 0, 0.5);
+}
+
+/* ---- Darker: near-black, high contrast ---- */
+:root[data-theme='darker'] {
+  --bg: #08080a;
+  --bg-elev: #101014;
+  --bg-elev2: #15151a;
+  --bg-inset: #030304;
+  --bg-titlebar: #1a1a1f;
+  --border: #23232a;
+  --border-soft: #1a1a20;
+  --text: #dcdce0;
+  --text-dim: #8b9096;
+  --text-muted: #565b62;
+  --text-bright: #ffffff;
+  --sel: #14304f;
+  --hover: #16161c;
+  --guide: #29292f;
+  --shadow: 0 8px 34px rgba(0, 0, 0, 0.75);
+}
+
+/* ---- Light: VSCode "Light+" ---- */
+:root[data-theme='light'] {
+  --bg: #ffffff;
+  --bg-elev: #f3f3f3;
+  --bg-elev2: #f8f8f8;
+  --bg-inset: #ececec;
+  --bg-titlebar: #e7e7e7;
+  --border: #d4d4d4;
+  --border-soft: #e4e4e4;
+  --text: #2b2b2b;
+  --text-dim: #55595f;
+  --text-muted: #8a8f96;
+  --text-bright: #101010;
+  --accent: #267f99;
+  --sel: #add6ff;
+  --sel-text: #06263b;
+  --hover: #e8e8e8;
+  --guide: #d0d0d0;
+  --hl-bg: rgba(255, 214, 10, 0.45);
+  --shadow: 0 8px 30px rgba(0, 0, 0, 0.18);
+
+  --tok-blue: #0000ff;
+  --tok-teal: #267f99;
+  --tok-yellow: #795e26;
+  --tok-orange: #a31515;
+  --tok-green: #008000;
+  --tok-num: #098658;
+  --tok-purple: #af00db;
+  --tok-red: #cd3131;
+  --tok-pink: #b5299e;
+
+  --c-red: #cd3131;
+  --c-orange: #b45309;
+  --c-yellow: #8a6d00;
+  --c-green: #008000;
+  --c-cyan: #267f99;
+  --c-blue: #0000ff;
+  --c-purple: #af00db;
+  --c-pink: #b5299e;
+  --c-gray: #6b7178;
 }
 
 * {
@@ -91,7 +155,7 @@ body {
 
 ::selection {
   background: var(--sel);
-  color: #fff;
+  color: var(--sel-text);
 }
 
 button {
@@ -134,7 +198,7 @@ kbd {
   font-size: 0.92em;
 }
 .md-highlight {
-  background: rgba(220, 220, 170, 0.22);
+  background: var(--hl-bg);
   color: var(--tok-yellow);
   border-radius: 3px;
   padding: 0 2px;

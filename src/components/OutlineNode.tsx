@@ -8,6 +8,7 @@ import { useDragStore, type DropPosition } from '../store/dragStore';
 import { useUi } from './ui-context';
 import { Editable, type EditableHandle } from './Editable';
 import { renderInline } from '../lib/markdown';
+import { readFiles, isImage, formatBytes } from '../lib/attachments';
 import {
   setCaret,
   getCaretOffset,
@@ -33,10 +34,25 @@ export default function OutlineNode({ id, depth, visibleSet }: Props) {
   const prefs = useStore((s) => s.preferences);
   const myFocus = useStore((s) => (s.focus && s.focus.id === id ? s.focus : null));
   const dropPos = useDragStore((s) => (s.overId === id ? s.position : null));
+  const numbered = useStore((s) => {
+    const d = s.currentDocId ? s.docs[s.currentDocId] : null;
+    return d?.settings.numbered ?? false;
+  });
+  const siblingIndex = useStore((s) => {
+    const p = s.items[id]?.parent;
+    return p ? s.items[p].children.indexOf(id) : 0;
+  });
   const ui = useUi();
 
   const [editing, setEditing] = useState(false);
   const [noteEditing, setNoteEditing] = useState(false);
+  const [fileOver, setFileOver] = useState(false);
+
+  const attach = async (files: FileList | File[]) => {
+    const { attachments, errors } = await readFiles(files);
+    if (attachments.length) useStore.getState().addAttachments(id, attachments);
+    if (errors.length) alert(errors.join('\n'));
+  };
   const editRef = useRef<EditableHandle>(null);
   const noteRef = useRef<HTMLTextAreaElement>(null);
   const pendingCaret = useRef<'start' | 'end' | number | null>(null);
@@ -317,6 +333,13 @@ export default function OutlineNode({ id, depth, visibleSet }: Props) {
   };
   const onDragOver = (e: React.DragEvent) => {
     const { dragId } = useDragStore.getState();
+    // External files being dragged in from the OS → attach on drop.
+    if (!dragId && e.dataTransfer.types.includes('Files')) {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'copy';
+      if (!fileOver) setFileOver(true);
+      return;
+    }
     if (!dragId || dragId === id) return;
     if (isAncestor(useStore.getState().items, dragId, id)) return;
     e.preventDefault();
@@ -329,9 +352,19 @@ export default function OutlineNode({ id, depth, visibleSet }: Props) {
     else pos = 'child';
     useDragStore.getState().over(id, pos);
   };
+  const onDragLeave = () => {
+    if (fileOver) setFileOver(false);
+  };
   const onDrop = (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
+    if (fileOver) setFileOver(false);
+    // OS file drop → attach.
+    if (e.dataTransfer.files && e.dataTransfer.files.length) {
+      void attach(e.dataTransfer.files);
+      useDragStore.getState().end();
+      return;
+    }
     const { dragId, position } = useDragStore.getState();
     if (dragId && position) useStore.getState().moveItem(dragId, id, position);
     useDragStore.getState().end();
@@ -358,8 +391,11 @@ export default function OutlineNode({ id, depth, visibleSet }: Props) {
   return (
     <div className="node" data-id={id}>
       <div
-        className={'node-row' + (dropPos ? ` drop-${dropPos}` : '')}
+        className={
+          'node-row' + (dropPos ? ` drop-${dropPos}` : '') + (fileOver ? ' file-over' : '')
+        }
         onDragOver={onDragOver}
+        onDragLeave={onDragLeave}
         onDrop={onDrop}
         onContextMenu={(e) => {
           e.preventDefault();
@@ -376,14 +412,18 @@ export default function OutlineNode({ id, depth, visibleSet }: Props) {
             {item.collapsed ? '▸' : '▾'}
           </button>
           <span
-            className={'bullet' + (item.collapsed && hasChildren ? ' has-collapsed' : '')}
+            className={
+              'bullet' +
+              (item.collapsed && hasChildren ? ' has-collapsed' : '') +
+              (numbered ? ' numbered' : '')
+            }
             draggable
             onDragStart={onDragStart}
             onDragEnd={() => useDragStore.getState().end()}
             onClick={() => store.zoomIn(id)}
             title="Click to zoom in · drag to move"
           >
-            <span className="bullet-dot" />
+            {numbered ? <span className="bullet-num">{siblingIndex + 1}.</span> : <span className="bullet-dot" />}
           </span>
           {item.checkbox && (
             <input
@@ -407,6 +447,7 @@ export default function OutlineNode({ id, depth, visibleSet }: Props) {
               onInput={(t) => useStore.getState().setText(id, t)}
               onKeyDown={onTextKeyDown}
               onBlur={() => setEditing(false)}
+              onFiles={(files) => void attach(files)}
             />
           ) : (
             <div
@@ -441,6 +482,49 @@ export default function OutlineNode({ id, depth, visibleSet }: Props) {
                 ))}
               </div>
             ))}
+
+          {(item.attachments?.length ?? 0) > 0 && (
+            <div className="attachments">
+              {item.attachments.map((att) =>
+                isImage(att.type) ? (
+                  <figure className="att-image" key={att.id}>
+                    <img src={att.dataUrl} alt={att.name} loading="lazy" />
+                    <button
+                      className="att-remove"
+                      title="Remove"
+                      onClick={() => useStore.getState().removeAttachment(id, att.id)}
+                    >
+                      ✕
+                    </button>
+                    <figcaption>{att.name}</figcaption>
+                  </figure>
+                ) : (
+                  <a
+                    className="att-file"
+                    key={att.id}
+                    href={att.dataUrl}
+                    download={att.name}
+                    title={`${att.name} · ${formatBytes(att.size)}`}
+                  >
+                    <span className="att-icon">📎</span>
+                    <span className="att-name">{att.name}</span>
+                    <span className="att-size">{formatBytes(att.size)}</span>
+                    <button
+                      className="att-remove"
+                      title="Remove"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        useStore.getState().removeAttachment(id, att.id);
+                      }}
+                    >
+                      ✕
+                    </button>
+                  </a>
+                ),
+              )}
+            </div>
+          )}
         </div>
       </div>
 

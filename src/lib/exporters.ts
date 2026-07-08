@@ -2,7 +2,7 @@
 // Serialize an outline subtree to Markdown / plain text / OPML / JSON.
 // Operates on the raw item text so formatting round-trips.
 // ---------------------------------------------------------------------------
-import type { OutlineItem } from '../types';
+import type { OutlineItem, Attachment } from '../types';
 import type { ItemMap } from './tree';
 import { plainText } from './markdown';
 
@@ -94,6 +94,7 @@ export interface JsonNode {
   collapsed?: boolean;
   heading?: number;
   color?: string | null;
+  attachments?: Attachment[];
   children?: JsonNode[];
 }
 
@@ -109,6 +110,7 @@ export function exportJson(items: ItemMap, rootId: string, title: string): strin
       if (child.collapsed) node.collapsed = true;
       if (child.heading) node.heading = child.heading;
       if (child.color) node.color = child.color;
+      if (child.attachments?.length) node.attachments = child.attachments;
       const kids = build(child.id);
       if (kids.length) node.children = kids;
       return node;
