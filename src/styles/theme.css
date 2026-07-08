@@ -1,0 +1,198 @@
+/* ==========================================================================
+   VSCode "Dark+" inspired theme — color-coded, monospace, hacker aesthetic.
+   ========================================================================== */
+:root {
+  --bg: #1e1e1e;
+  --bg-elev: #252526;
+  --bg-elev2: #2d2d30;
+  --bg-inset: #1a1a1a;
+  --bg-titlebar: #323233;
+  --border: #333336;
+  --border-soft: #2a2a2c;
+  --text: #d4d4d4;
+  --text-dim: #9aa0a6;
+  --text-muted: #6b7178;
+  --text-bright: #f2f2f2;
+  --accent: #4ec9b0;
+  --sel: #264f78;
+  --hover: #2a2d2e;
+  --guide: #3a3a3c;
+
+  /* syntax token palette */
+  --tok-blue: #569cd6;
+  --tok-teal: #4ec9b0;
+  --tok-yellow: #dcdcaa;
+  --tok-orange: #ce9178;
+  --tok-green: #6a9955;
+  --tok-num: #b5cea8;
+  --tok-purple: #c586c0;
+  --tok-red: #f44747;
+  --tok-pink: #d16d9e;
+
+  /* color labels */
+  --c-red: #f44747;
+  --c-orange: #ce9178;
+  --c-yellow: #dcdcaa;
+  --c-green: #6a9955;
+  --c-cyan: #4ec9b0;
+  --c-blue: #569cd6;
+  --c-purple: #c586c0;
+  --c-pink: #d16d9e;
+  --c-gray: #858585;
+
+  --font-mono: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', 'SF Mono', 'Menlo',
+    'Consolas', ui-monospace, monospace;
+  --font-size: 15px;
+
+  --radius: 6px;
+  --shadow: 0 8px 30px rgba(0, 0, 0, 0.5);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: var(--font-size);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  overflow: hidden;
+}
+
+/* Scrollbars — VSCode style */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #424245;
+  border-radius: 6px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #55565a;
+  background-clip: content-box;
+}
+
+::selection {
+  background: var(--sel);
+  color: #fff;
+}
+
+button {
+  font-family: inherit;
+  font-size: inherit;
+  color: inherit;
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+input,
+textarea,
+select {
+  font-family: inherit;
+  font-size: inherit;
+  color: var(--text);
+}
+
+kbd {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  background: var(--bg-inset);
+  border: 1px solid var(--border);
+  border-bottom-width: 2px;
+  border-radius: 4px;
+  padding: 1px 6px;
+  color: var(--tok-blue);
+  white-space: nowrap;
+}
+
+/* ------- inline markdown tokens (syntax-highlight coded) ------- */
+.md-code {
+  font-family: var(--font-mono);
+  background: var(--bg-inset);
+  color: var(--tok-orange);
+  padding: 0 4px;
+  border-radius: 4px;
+  border: 1px solid var(--border-soft);
+  font-size: 0.92em;
+}
+.md-highlight {
+  background: rgba(220, 220, 170, 0.22);
+  color: var(--tok-yellow);
+  border-radius: 3px;
+  padding: 0 2px;
+}
+.md-tag {
+  color: var(--tok-blue);
+  cursor: pointer;
+  font-weight: 500;
+}
+.md-tag:hover {
+  text-decoration: underline;
+}
+.md-mention {
+  color: var(--tok-yellow);
+  cursor: pointer;
+  font-weight: 500;
+}
+.md-mention:hover {
+  text-decoration: underline;
+}
+.md-date {
+  color: var(--tok-purple);
+  cursor: pointer;
+  background: rgba(197, 134, 192, 0.12);
+  border-radius: 3px;
+  padding: 0 4px;
+  white-space: nowrap;
+  font-size: 0.9em;
+}
+.md-date:hover {
+  background: rgba(197, 134, 192, 0.24);
+}
+.md-date-overdue {
+  color: var(--tok-red);
+  background: rgba(244, 71, 71, 0.14);
+}
+.md-link {
+  color: var(--accent);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.md-ilink {
+  color: var(--tok-teal);
+  cursor: pointer;
+  border-bottom: 1px dashed var(--tok-teal);
+}
+.md-ilink:hover {
+  background: rgba(78, 201, 176, 0.12);
+}
+strong {
+  color: var(--text-bright);
+  font-weight: 700;
+}
+em {
+  color: var(--text);
+  font-style: italic;
+}
+del {
+  color: var(--text-muted);
+  text-decoration-color: var(--tok-red);
+}
