@@ -83,6 +83,40 @@ or just keep running it locally.
 
 ---
 
+## Run as a Mac app (double-click) 🍎
+
+The repo ships a ready **`Outliner.app`** you can double-click — no compiling,
+no signing, no App Store. It starts a tiny local server and opens Outliner in
+its own window.
+
+```bash
+# one-time, in the project folder:
+npm install
+npm run build      # the app also self-builds on first launch if you skip this
+```
+
+Then just **double-click `Outliner.app`**. It will:
+
+- find your Node.js, serve the built app at `http://localhost:5273`, and open it
+  in a dedicated window (a chromeless Chrome/Edge/Brave “app” window if you have
+  one, otherwise your default browser);
+- reuse the same origin every time, so your notes are always there.
+
+**Keep `Outliner.app` inside the project folder** (it locates the built site
+relative to itself). To launch it from the Dock or `/Applications`, right-click
+it → **Make Alias** and move the *alias* — not the `.app` itself.
+
+Why a script bundle instead of a compiled binary? A signed native `.app` has to
+be built and code-signed on a Mac; this bundle is a plain shell-script app, so
+it runs on Apple Silicon and Intel with zero setup. If you'd rather have a fully
+self-contained native window (its own runtime, nothing external), an **Electron**
+wrapper is the usual next step — ask and I'll add the config.
+
+> To stop the background server later: `pkill -f scripts/serve.mjs` (or just log
+> out / reboot).
+
+---
+
 ## Privacy & data
 
 - All documents are stored in **IndexedDB** in your browser, keyed to the app's

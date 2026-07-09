@@ -1,0 +1,84 @@
+#!/bin/bash
+# ---------------------------------------------------------------------------
+# Outliner.app launcher.
+#
+# Starts a tiny local static server for the built app and opens it in its own
+# window (a Chromium "app" window if available, otherwise your default browser).
+# No compilation and no code signing — it's a plain shell-script bundle, so it
+# runs on Apple Silicon and Intel without a developer certificate.
+#
+# Keep this .app INSIDE the project folder — it locates the built site relative
+# to its own location. To launch it from the Dock or /Applications, make an
+# ALIAS (right-click -> Make Alias) and move the alias, not the .app itself.
+# ---------------------------------------------------------------------------
+set -uo pipefail
+
+LOG="${TMPDIR:-/tmp}/outliner-launcher.log"
+exec >>"$LOG" 2>&1
+echo "=== launch $(date) ==="
+
+REPO="$(cd "$(dirname "$0")/../../.." && pwd)"
+PORT=5273
+URL="http://localhost:$PORT"
+
+note() { osascript -e "display notification \"$1\" with title \"Outliner\"" >/dev/null 2>&1 || true; }
+errorbox() {
+  osascript -e "display dialog \"$1\" with title \"Outliner\" buttons {\"OK\"} default button 1 with icon caution" >/dev/null 2>&1 || true
+}
+
+find_node() {
+  local c d p
+  for c in /opt/homebrew/bin/node /usr/local/bin/node /usr/bin/node; do
+    [ -x "$c" ] && { echo "$c"; return 0; }
+  done
+  for d in "$HOME"/.nvm/versions/node/*/bin "$HOME/.volta/bin" "$HOME"/.fnm/*/installation/bin "$HOME/.asdf/shims"; do
+    [ -x "$d/node" ] && { echo "$d/node"; return 0; }
+  done
+  # Fall back to the login shell's PATH (covers nvm/fnm/asdf/volta shims).
+  p="$("${SHELL:-/bin/zsh}" -lic 'command -v node' 2>/dev/null | tail -n1)"
+  [ -n "${p:-}" ] && [ -x "$p" ] && { echo "$p"; return 0; }
+  return 1
+}
+
+NODE="$(find_node || true)"
+if [ -z "${NODE:-}" ]; then
+  errorbox "Couldn't find Node.js. Install it from https://nodejs.org (or 'brew install node'), then double-click Outliner again."
+  exit 1
+fi
+NODE_BIN_DIR="$(dirname "$NODE")"
+export PATH="$NODE_BIN_DIR:$PATH"
+
+# Build the site on first run (dist/ is not checked into git).
+if [ ! -f "$REPO/dist/index.html" ]; then
+  note "First run — building Outliner (this only happens once)…"
+  if ! ( cd "$REPO" && "$NODE_BIN_DIR/npm" install && "$NODE_BIN_DIR/npm" run build ); then
+    errorbox "Couldn't build Outliner. Open Terminal in the project folder and run: npm install && npm run build"
+    exit 1
+  fi
+fi
+
+# Start the local server if it isn't already up (idempotent across launches).
+if ! curl -s -o /dev/null "$URL"; then
+  nohup "$NODE" "$REPO/scripts/serve.mjs" "$REPO/dist" "$PORT" >>"$LOG" 2>&1 &
+fi
+
+# Wait for the server to answer.
+if ! curl -s --retry-connrefused --retry 60 --retry-delay 0 --max-time 6 -o /dev/null "$URL"; then
+  errorbox "Outliner's local server didn't start. Details in: $LOG"
+  exit 1
+fi
+
+# Open in a dedicated app window (chromeless) if a Chromium browser exists,
+# otherwise fall back to the default browser.
+open_window() {
+  local app
+  for app in "Google Chrome" "Microsoft Edge" "Brave Browser" "Chromium" "Vivaldi" "Arc"; do
+    if [ -d "/Applications/$app.app" ] || [ -d "$HOME/Applications/$app.app" ]; then
+      open -na "$app" --args --app="$URL" >/dev/null 2>&1 && return 0
+    fi
+  done
+  open "$URL"
+}
+open_window
+echo "opened $URL"
+exit 0
