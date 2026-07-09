@@ -83,34 +83,43 @@ or just keep running it locally.
 
 ---
 
-## Run as a Mac app (double-click) 🍎
+## Run as a Mac app 🍎
 
-The repo ships a ready **`Outliner.app`** you can double-click — no compiling,
-no signing, no App Store. It starts a tiny local server and opens Outliner in
-its own window.
+### Recommended: install it as an app (lightweight, real Dock icon)
+
+Outliner is an installable **PWA**, so you get a proper Mac app — your own icon
+in the Dock/Launchpad, a single window that *is* the app, ⌘Q to quit, and it
+even works offline — **without Electron or any compilation.**
 
 ```bash
 # one-time, in the project folder:
-npm install
-npm run build      # the app also self-builds on first launch if you skip this
+npm install && npm run build
 ```
 
-Then just **double-click `Outliner.app`**. It will:
+1. Double-click **`Outliner.app`** (or run `npm run serve`). It serves the app at
+   `http://localhost:5273` and opens it in Chrome/Edge/Brave.
+2. In the address bar, click **Install Outliner** (the ⊕/install icon), or menu →
+   *Install Outliner…* / *Cast, Save, Share → Install*.
+3. Launch it from Launchpad/Dock like any app. The service worker caches it, so
+   it opens even when the local server isn't running. All features work
+   (it's Chromium — including *connect a file*).
 
-- find your Node.js, serve the built app at `http://localhost:5273`, and open it
-  in a dedicated window (a chromeless Chrome/Edge/Brave “app” window if you have
-  one, otherwise your default browser);
-- reuse the same origin every time, so your notes are always there.
+The custom icon is a yellow “O” on a dark‑grey squircle (regenerate anytime with
+`node scripts/make-icon.mjs`).
 
-**Keep `Outliner.app` inside the project folder** (it locates the built site
-relative to itself). To launch it from the Dock or `/Applications`, right-click
-it → **Make Alias** and move the *alias* — not the `.app` itself.
+### Or just double-click the bundled launcher
 
-Why a script bundle instead of a compiled binary? A signed native `.app` has to
-be built and code-signed on a Mac; this bundle is a plain shell-script app, so
-it runs on Apple Silicon and Intel with zero setup. If you'd rather have a fully
-self-contained native window (its own runtime, nothing external), an **Electron**
-wrapper is the usual next step — ask and I'll add the config.
+The repo also ships **`Outliner.app`** — a plain shell-script bundle (no
+compiling, no signing; runs on Apple Silicon and Intel). Double-click it and it
+finds your Node.js, serves the built app, and opens it in your browser. **Keep it
+inside the project folder** (it locates the built site relative to itself); to
+launch from elsewhere, right-click → **Make Alias** and move the alias.
+
+> Why not a single compiled binary in the repo? A signed native `.app` must be
+> built and code-signed on a Mac. The PWA route gives you a real app icon and
+> window with none of that. Want a fully self-contained native `.app`/`.dmg`
+> instead (built on a Mac / CI runner)? That's an Electron or Swift-WKWebView
+> wrapper — ask and I'll add it.
 
 > To stop the background server later: `pkill -f scripts/serve.mjs` (or just log
 > out / reboot).

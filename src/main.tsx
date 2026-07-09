@@ -9,3 +9,14 @@ createRoot(document.getElementById('root')!).render(
     <App />
   </React.StrictMode>,
 );
+
+// Register the offline service worker in production builds so the installed
+// PWA works even when the local server isn't running. (Skipped in dev to keep
+// hot-module-reload clean.)
+if (import.meta.env.PROD && 'serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js').catch(() => {
+      /* offline support is best-effort */
+    });
+  });
+}
