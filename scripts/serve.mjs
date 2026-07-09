@@ -67,11 +67,13 @@ const server = createServer(async (req, res) => {
   }
 });
 
+let bindAttempts = 0;
 server.on('error', (err) => {
-  if (err.code === 'EADDRINUSE') {
-    // Already running on this port — that's fine, just exit quietly.
-    console.log(`Port ${PORT} already in use; assuming Outliner is already serving.`);
-    process.exit(0);
+  if (err.code === 'EADDRINUSE' && bindAttempts < 20) {
+    // The port may be briefly held by a server that's being replaced — retry.
+    bindAttempts++;
+    setTimeout(() => server.listen(PORT, HOST), 200);
+    return;
   }
   console.error(err);
   process.exit(1);

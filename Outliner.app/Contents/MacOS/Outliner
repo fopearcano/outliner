@@ -63,14 +63,26 @@ if [ -z "${NODE:-}" ]; then
 fi
 echo "NODE=$NODE"
 
-# Start the local server if it isn't already up (idempotent across launches).
-if ! curl -s -o /dev/null "$URL"; then
+# Is the CORRECT Outliner app already answering on this port? We check for our
+# actual page — not just "something responded" — so a stale server left serving
+# the wrong folder (which returns 404s) doesn't get mistaken for a live app.
+server_ok() { curl -s --max-time 2 "$URL/" 2>/dev/null | grep -q 'id="root"'; }
+
+if ! server_ok; then
+  # Replace any stale Outliner server we previously left on this port, then
+  # serve the correct built site. (Our background servers only run serve.mjs.)
+  pkill -f "serve.mjs.*${PORT}" 2>/dev/null || true
   nohup "$NODE" "$SERVE" "$DIST" "$PORT" >>"$LOG" 2>&1 &
 fi
 
-# Wait for the server to answer.
-if ! curl -s --retry-connrefused --retry 60 --retry-delay 0 --max-time 6 -o /dev/null "$URL"; then
-  errorbox "Outliner's local server didn't start. Details in: $LOG"
+# Wait (up to ~12s) for the correct server to come up and serve our page.
+ready=0
+for _ in $(seq 1 60); do
+  if server_ok; then ready=1; break; fi
+  sleep 0.2
+done
+if [ "$ready" != 1 ]; then
+  errorbox "Outliner's local server didn't start correctly. Quit any stale copy with:  pkill -f serve.mjs  — then relaunch. Details: $LOG"
   exit 1
 fi
 
