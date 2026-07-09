@@ -6,3 +6,4 @@ dist-ssr
 .vite
 *.log
 *.tsbuildinfo
+Outliner.app/Contents/Resources/serve.mjs

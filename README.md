@@ -93,27 +93,31 @@ even works offline — **without Electron or any compilation.**
 
 ```bash
 # one-time, in the project folder:
-npm install && npm run build
+npm install && npm run mac
 ```
 
-1. Double-click **`Outliner.app`** (or run `npm run serve`). It serves the app at
-   `http://localhost:5273` and opens it in Chrome/Edge/Brave.
+`npm run mac` builds the site and bundles it **inside `Outliner.app`**, so the
+app is self-contained and you can move it anywhere — including `/Applications`.
+(Node.js still needs to be installed on the Mac.)
+
+1. Double-click **`Outliner.app`**. It serves the app at `http://localhost:5273`
+   and opens it in Chrome/Edge/Brave.
 2. In the address bar, click **Install Outliner** (the ⊕/install icon), or menu →
    *Install Outliner…* / *Cast, Save, Share → Install*.
-3. Launch it from Launchpad/Dock like any app. The service worker caches it, so
+3. Launch it from Launchpad/Dock like any app — your own icon in the Dock, a
+   single window that *is* the app, ⌘Q to quit. The service worker caches it, so
    it opens even when the local server isn't running. All features work
    (it's Chromium — including *connect a file*).
 
 The custom icon is a yellow “O” on a dark‑grey squircle (regenerate anytime with
 `node scripts/make-icon.mjs`).
 
-### Or just double-click the bundled launcher
-
-The repo also ships **`Outliner.app`** — a plain shell-script bundle (no
-compiling, no signing; runs on Apple Silicon and Intel). Double-click it and it
-finds your Node.js, serves the built app, and opens it in your browser. **Keep it
-inside the project folder** (it locates the built site relative to itself); to
-launch from elsewhere, right-click → **Make Alias** and move the alias.
+> **Just want the launcher without installing a PWA?** After `npm run mac`,
+> double-clicking `Outliner.app` still serves the built app and opens it in your
+> browser — that's all it does. It's a plain shell-script bundle (no compiling,
+> no signing; Apple Silicon + Intel). If it ever can't find things, its log is at
+> `/tmp/outliner-launcher.log`. Re-run `npm run mac` after pulling updates so the
+> bundled copy stays current.
 
 > Why not a single compiled binary in the repo? A signed native `.app` must be
 > built and code-signed on a Mac. The PWA route gives you a real app icon and

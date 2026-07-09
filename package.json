@@ -9,6 +9,7 @@
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
     "serve": "node scripts/serve.mjs",
+    "mac": "npm run build && node scripts/build-macapp.mjs",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

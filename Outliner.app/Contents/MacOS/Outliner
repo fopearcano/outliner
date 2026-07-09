@@ -2,14 +2,13 @@
 # ---------------------------------------------------------------------------
 # Outliner.app launcher.
 #
-# Starts a tiny local static server for the built app and opens it in its own
-# window (a Chromium "app" window if available, otherwise your default browser).
-# No compilation and no code signing — it's a plain shell-script bundle, so it
-# runs on Apple Silicon and Intel without a developer certificate.
+# Serves the built app locally and opens it in your browser (where you can then
+# "Install Outliner" as a real PWA app). Plain shell-script bundle — no compile,
+# no code signing; runs on Apple Silicon and Intel.
 #
-# Keep this .app INSIDE the project folder — it locates the built site relative
-# to its own location. To launch it from the Dock or /Applications, make an
-# ALIAS (right-click -> Make Alias) and move the alias, not the .app itself.
+# Make it self-contained & movable anywhere (incl. /Applications) by running,
+# once, in the project folder:   npm run mac
+# That copies the built site into this bundle's Resources.
 # ---------------------------------------------------------------------------
 set -uo pipefail
 
@@ -17,7 +16,8 @@ LOG="${TMPDIR:-/tmp}/outliner-launcher.log"
 exec >>"$LOG" 2>&1
 echo "=== launch $(date) ==="
 
-REPO="$(cd "$(dirname "$0")/../../.." && pwd)"
+SELF_DIR="$(cd "$(dirname "$0")" && pwd)"          # .../Contents/MacOS
+RES="$(cd "$SELF_DIR/.." 2>/dev/null && pwd)/Resources"
 PORT=5273
 URL="http://localhost:$PORT"
 
@@ -25,6 +25,22 @@ note() { osascript -e "display notification \"$1\" with title \"Outliner\"" >/de
 errorbox() {
   osascript -e "display dialog \"$1\" with title \"Outliner\" buttons {\"OK\"} default button 1 with icon caution" >/dev/null 2>&1 || true
 }
+
+# Prefer a self-contained copy bundled inside the .app; otherwise fall back to
+# the project folder this .app lives in (works when kept inside the repo).
+if [ -f "$RES/dist/index.html" ] && [ -f "$RES/serve.mjs" ]; then
+  DIST="$RES/dist"; SERVE="$RES/serve.mjs"
+else
+  REPO="$(cd "$SELF_DIR/../../.." 2>/dev/null && pwd)"
+  DIST="$REPO/dist"; SERVE="$REPO/scripts/serve.mjs"
+fi
+echo "DIST=$DIST"
+echo "SERVE=$SERVE"
+
+if [ ! -f "$DIST/index.html" ] || [ ! -f "$SERVE" ]; then
+  errorbox "Outliner isn't set up here yet. In the project folder run:  npm run mac  — then move/relaunch this app. (Checked: $DIST — see log: $LOG)"
+  exit 1
+fi
 
 find_node() {
   local c d p
@@ -42,24 +58,14 @@ find_node() {
 
 NODE="$(find_node || true)"
 if [ -z "${NODE:-}" ]; then
-  errorbox "Couldn't find Node.js. Install it from https://nodejs.org (or 'brew install node'), then double-click Outliner again."
+  errorbox "Couldn't find Node.js. Install it from https://nodejs.org (or 'brew install node'), then open Outliner again."
   exit 1
 fi
-NODE_BIN_DIR="$(dirname "$NODE")"
-export PATH="$NODE_BIN_DIR:$PATH"
-
-# Build the site on first run (dist/ is not checked into git).
-if [ ! -f "$REPO/dist/index.html" ]; then
-  note "First run — building Outliner (this only happens once)…"
-  if ! ( cd "$REPO" && "$NODE_BIN_DIR/npm" install && "$NODE_BIN_DIR/npm" run build ); then
-    errorbox "Couldn't build Outliner. Open Terminal in the project folder and run: npm install && npm run build"
-    exit 1
-  fi
-fi
+echo "NODE=$NODE"
 
 # Start the local server if it isn't already up (idempotent across launches).
 if ! curl -s -o /dev/null "$URL"; then
-  nohup "$NODE" "$REPO/scripts/serve.mjs" "$REPO/dist" "$PORT" >>"$LOG" 2>&1 &
+  nohup "$NODE" "$SERVE" "$DIST" "$PORT" >>"$LOG" 2>&1 &
 fi
 
 # Wait for the server to answer.
@@ -69,9 +75,7 @@ if ! curl -s --retry-connrefused --retry 60 --retry-delay 0 --max-time 6 -o /dev
 fi
 
 # Open in a Chromium browser (a normal window, so the address-bar "Install
-# Outliner" button is available), else the default browser. Installing turns
-# Outliner into a real Dock app with its own icon — the recommended way to run
-# it day to day. See README ("Install as a Mac app").
+# Outliner" button is available), else the default browser.
 open_browser() {
   local app
   for app in "Google Chrome" "Microsoft Edge" "Brave Browser" "Chromium" "Vivaldi"; do
