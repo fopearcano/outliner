@@ -17,13 +17,18 @@ type Rule = {
   re: RegExp;
 };
 
-// Ordered by precedence. Earlier rules win ties on match position.
+// Ordered by precedence. Earlier rules win ties on match position. `mark` and
+// `dot` sit before `italic` so a leading "* " list marker beats *italic*.
 const RULES: Rule[] = [
   { name: 'code', re: /`([^`]+)`/ },
   { name: 'bold', re: /\*\*([^*]+?)\*\*/ },
   { name: 'boldAlt', re: /__([^_]+?)__/ },
   { name: 'strike', re: /~~([^~]+?)~~/ },
   { name: 'highlight', re: /==([^=]+?)==/ },
+  // A dot immediately before a word → fuchsia (e.g. .todo).
+  { name: 'dot', re: /(?<!\S)\.([\p{L}\p{N}_][\p{L}\p{N}_\-/]*)/u },
+  // A standalone dash or asterisk marker → carmine red (e.g. "- item", "* item").
+  { name: 'mark', re: /(?<!\S)([-*])(?!\S)/ },
   { name: 'italic', re: /\*([^*\n]+?)\*/ },
   { name: 'italicAlt', re: /(?<![\w])_([^_\n]+?)_(?![\w])/ },
   { name: 'ilink', re: /\[\[([^\]]+?)\]\]/ },
@@ -31,12 +36,17 @@ const RULES: Rule[] = [
   { name: 'date', re: /!\(([^)]+?)\)/ },
   { name: 'tag', re: /(?<!\S)#([\p{L}\p{N}_\-/]+)/u },
   { name: 'mention', re: /(?<!\S)@([\p{L}\p{N}_\-/]+)/u },
-  // A dot immediately before a word → fuchsia (e.g. .todo).
-  { name: 'dot', re: /(?<!\S)\.([\p{L}\p{N}_][\p{L}\p{N}_\-/]*)/u },
-  // A standalone dash or asterisk marker → carmine red (e.g. "- item", "* item").
-  { name: 'mark', re: /(?<!\S)([-*])(?!\S)/ },
   { name: 'url', re: /(?<!\S)(https?:\/\/[^\s)]+)/ },
 ];
+
+// Global-flag copies driven with lastIndex so that matching a token then
+// continuing does NOT lose the real preceding character: the (?<!\S) lookbehind
+// on tag/mention/dot/mark keeps seeing text[index-1] instead of a fake string
+// boundary. Fixes e.g. "@bob.smith" wrongly rendering ".smith" as a .word.
+const G_RULES: Rule[] = RULES.map((r) => ({
+  name: r.name,
+  re: new RegExp(r.re.source, r.re.flags.includes('g') ? r.re.flags : r.re.flags + 'g'),
+}));
 
 let keySeq = 0;
 
@@ -44,25 +54,25 @@ export function renderInline(text: string, opts: RenderOpts = {}): React.ReactNo
   return <>{render(text, opts, 0)}</>;
 }
 
-function render(text: string, opts: RenderOpts, depth: number): React.ReactNode[] {
-  if (!text) return [];
-  if (depth > 12) return [text]; // guard against pathological nesting
+function render(text: string, opts: RenderOpts, depth: number, start = 0): React.ReactNode[] {
+  if (start >= text.length) return [];
+  if (depth > 12) return [text.slice(start)]; // guard against pathological nesting
 
   let best: { rule: Rule; m: RegExpExecArray } | null = null;
-  for (const rule of RULES) {
+  for (const rule of G_RULES) {
+    rule.re.lastIndex = start;
     const m = rule.re.exec(text);
     if (m && (!best || m.index < best.m.index)) {
       best = { rule, m };
     }
   }
-  if (!best) return [text];
+  if (!best) return [text.slice(start)];
 
   const { rule, m } = best;
   const out: React.ReactNode[] = [];
-  if (m.index > 0) out.push(text.slice(0, m.index));
+  if (m.index > start) out.push(text.slice(start, m.index));
   out.push(renderToken(rule, m, opts, depth));
-  const rest = text.slice(m.index + m[0].length);
-  out.push(...render(rest, opts, depth));
+  out.push(...render(text, opts, depth, m.index + m[0].length));
   return out;
 }
 

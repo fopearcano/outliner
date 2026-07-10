@@ -117,6 +117,8 @@ export interface StoreState {
   setNote: (id: string, note: string) => void;
   insertItemAfter: (id: string, before?: string, after?: string) => void;
   insertChild: (id: string) => void;
+  /** Append a new top-level block to `parentId`, placed in `column` (one undo step). */
+  addBlockInColumn: (parentId: string, column: number) => void;
   indent: (id: string) => void;
   outdent: (id: string) => void;
   moveUp: (id: string) => void;
@@ -573,6 +575,8 @@ export const useStore = create<StoreState>((set, get) => {
         const items = { ...s.items };
         const parentId = item.parent;
         const newItem = makeItem(parentId, { text: after ?? '', checkbox: item.checkbox });
+        // Inherit the column so a new sibling stays in the same column-view lane.
+        newItem.column = item.column;
         // Apply text split to the original if provided.
         if (before !== undefined) items[id] = touch({ ...item, text: before });
         // If the source is expanded with children, the new node becomes its
@@ -603,6 +607,22 @@ export const useStore = create<StoreState>((set, get) => {
           ...s.items,
           [child.id]: child,
           [id]: { ...item, children: [...item.children, child.id], collapsed: false },
+        };
+        return { items, focus: { id: child.id, pos: 'start', ts: Date.now() } };
+      });
+    },
+
+    addBlockInColumn: (parentId, column) => {
+      pushHistory();
+      set((s) => {
+        const parent = s.items[parentId];
+        if (!parent) return {};
+        const child = makeItem(parentId);
+        child.column = Math.max(0, column);
+        const items = {
+          ...s.items,
+          [child.id]: child,
+          [parentId]: { ...parent, children: [...parent.children, child.id], collapsed: false },
         };
         return { items, focus: { id: child.id, pos: 'start', ts: Date.now() } };
       });
@@ -717,7 +737,8 @@ export const useStore = create<StoreState>((set, get) => {
           const idx = kids.indexOf(targetId);
           kids.splice(position === 'before' ? idx : idx + 1, 0, dragId);
           items[parentId] = { ...items[parentId], children: kids };
-          items[dragId] = { ...items[dragId], parent: parentId };
+          // Dropping next to a block adopts that block's column-view lane.
+          items[dragId] = { ...items[dragId], parent: parentId, column: items[targetId].column };
         }
         return { items };
       });

@@ -157,20 +157,17 @@ function ColumnBody({
 }) {
   const items = useStore((s) => s.items);
   const fontSize = useStore((s) => s.preferences.fontSize);
+  const showCompleted = useStore((s) => s.preferences.showCompleted);
   const children = items[rootId]?.children ?? [];
 
   const cols: string[][] = Array.from({ length: count }, () => []);
   for (const id of children) {
+    // Skip blocks that OutlineNode would render as nothing (hidden completed),
+    // so we don't leave empty wrappers with dangling move controls.
+    if (!showCompleted && items[id]?.completed) continue;
     const c = Math.min(count - 1, Math.max(0, items[id]?.column ?? 0));
     cols[c].push(id);
   }
-
-  const addInColumn = (col: number) => {
-    const s = useStore.getState();
-    s.insertChild(rootId);
-    const nid = useStore.getState().focus?.id;
-    if (nid) useStore.getState().setItemColumn(nid, col);
-  };
 
   const style: React.CSSProperties =
     fit === 'scroll'
@@ -181,10 +178,14 @@ function ColumnBody({
     <div className={'columns ' + fit} style={style}>
       {cols.map((ids, i) => (
         <div className="column" key={i}>
-          {ids.map((id) => (
-            <ColumnBlock key={id} id={id} col={i} count={count} />
+          {ids.map((id, n) => (
+            <ColumnBlock key={id} id={id} col={i} count={count} index={n} />
           ))}
-          <div className="col-add" onClick={() => addInColumn(i)} title="Add a block to this column">
+          <div
+            className="col-add"
+            onClick={() => useStore.getState().addBlockInColumn(rootId, i)}
+            title="Add a block to this column"
+          >
             + block
           </div>
         </div>
@@ -193,7 +194,17 @@ function ColumnBody({
   );
 }
 
-function ColumnBlock({ id, col, count }: { id: string; col: number; count: number }) {
+function ColumnBlock({
+  id,
+  col,
+  count,
+  index,
+}: {
+  id: string;
+  col: number;
+  count: number;
+  index: number;
+}) {
   const move = (dir: -1 | 1) => useStore.getState().setItemColumn(id, col + dir);
   return (
     <div className="col-block">
@@ -210,7 +221,7 @@ function ColumnBlock({ id, col, count }: { id: string; col: number; count: numbe
           ▶
         </button>
       </div>
-      <OutlineNode id={id} depth={0} visibleSet={null} />
+      <OutlineNode id={id} depth={0} visibleSet={null} numberOverride={index} />
     </div>
   );
 }

@@ -54,10 +54,12 @@ export default function FormatToolbar() {
       }
       setPos({ top: rect.top - 8, left: rect.left + rect.width / 2 });
     };
+    const hide = () => setPos(null);
     document.addEventListener('selectionchange', update);
-    window.addEventListener('scroll', () => setPos(null), true);
+    window.addEventListener('scroll', hide, true);
     return () => {
       document.removeEventListener('selectionchange', update);
+      window.removeEventListener('scroll', hide, true);
     };
   }, []);
 
@@ -75,6 +77,10 @@ export default function FormatToolbar() {
     const node = editable?.closest<HTMLElement>('.node');
     const id = node?.dataset.id;
     if (!editable || !id) return;
+    // Only format when the whole selection lives inside this one bullet;
+    // otherwise a selection spilling into an adjacent bullet would wrap the
+    // wrong text.
+    if (!editable.contains(range.startContainer) || !editable.contains(range.endContainer)) return;
 
     const start = offsetIn(editable, range.startContainer, range.startOffset);
     const end = offsetIn(editable, range.endContainer, range.endOffset);

@@ -23,13 +23,15 @@ interface Props {
   depth: number;
   /** When filtering: only ids in this set render. null = normal outline. */
   visibleSet: Set<string> | null;
+  /** Overrides the numbered-list index (used by column views for per-column numbering). */
+  numberOverride?: number;
 }
 
 function isMod(e: React.KeyboardEvent): boolean {
   return e.metaKey || e.ctrlKey;
 }
 
-export default function OutlineNode({ id, depth, visibleSet }: Props) {
+export default function OutlineNode({ id, depth, visibleSet, numberOverride }: Props) {
   const item = useStore((s) => s.items[id]);
   const prefs = useStore((s) => s.preferences);
   const myFocus = useStore((s) => (s.focus && s.focus.id === id ? s.focus : null));
@@ -423,7 +425,11 @@ export default function OutlineNode({ id, depth, visibleSet }: Props) {
             onClick={() => store.zoomIn(id)}
             title="Click to zoom in · drag to move"
           >
-            {numbered ? <span className="bullet-num">{siblingIndex + 1}.</span> : <span className="bullet-dot" />}
+            {numbered ? (
+              <span className="bullet-num">{(numberOverride ?? siblingIndex) + 1}.</span>
+            ) : (
+              <span className="bullet-dot" />
+            )}
           </span>
           {item.checkbox && (
             <input
