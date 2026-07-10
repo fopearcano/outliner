@@ -91,6 +91,62 @@ export default function ViewOptions() {
           {doc && (
             <>
               <div className="view-sep" />
+              <div className="view-label">Layout</div>
+              <div className="seg">
+                {(
+                  [
+                    ['outline', 'Outline'],
+                    ['col2', '2 col'],
+                    ['col3', '3 col'],
+                  ] as const
+                ).map(([mode, label]) => (
+                  <button
+                    key={mode}
+                    className={'seg-btn' + (doc.settings.viewMode === mode ? ' on' : '')}
+                    onClick={() => useStore.getState().setDocSettings(doc.id, { viewMode: mode })}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+              {doc.settings.viewMode !== 'outline' && (
+                <>
+                  <div className="seg" style={{ marginTop: 6 }}>
+                    {(
+                      [
+                        ['wrap', 'Fit width'],
+                        ['scroll', 'Scroll + zoom'],
+                      ] as const
+                    ).map(([fit, label]) => (
+                      <button
+                        key={fit}
+                        className={'seg-btn' + (doc.settings.columnFit === fit ? ' on' : '')}
+                        onClick={() => useStore.getState().setDocSettings(doc.id, { columnFit: fit })}
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                  {doc.settings.columnFit === 'scroll' && (
+                    <div className="view-row static">
+                      <span>Zoom</span>
+                      <input
+                        type="range"
+                        min={0.5}
+                        max={2}
+                        step={0.1}
+                        value={doc.settings.columnZoom}
+                        onChange={(e) =>
+                          useStore.getState().setDocSettings(doc.id, { columnZoom: Number(e.target.value) })
+                        }
+                      />
+                      <span className="view-val">{doc.settings.columnZoom.toFixed(1)}×</span>
+                    </div>
+                  )}
+                </>
+              )}
+
+              <div className="view-sep" />
               <div className="view-label">This document</div>
               <Toggle
                 label="Checkbox mode"

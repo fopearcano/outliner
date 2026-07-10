@@ -9,6 +9,7 @@ import { parseQuery, matchItem } from '../lib/search';
 import { plainText, renderInline } from '../lib/markdown';
 import { useUi } from './ui-context';
 import ViewOptions from './ViewOptions';
+import { columnCount } from '../types';
 
 export default function DocumentView() {
   const doc = useStore((s) => (s.currentDocId ? s.docs[s.currentDocId] : null));
@@ -64,8 +65,11 @@ export default function DocumentView() {
     if (rootId) useStore.getState().insertChild(rootId);
   };
 
+  // Column layout only applies at the document root (not while zoomed or filtering).
+  const columnMode = doc.settings.viewMode !== 'outline' && !zoomItem && !query;
+
   return (
-    <div className="doc-view">
+    <div className={'doc-view' + (columnMode ? ' wide' : '')}>
       <div className="breadcrumb">
         {crumbs.map((c, i) => (
           <React.Fragment key={c.id ?? 'root'}>
@@ -89,38 +93,124 @@ export default function DocumentView() {
         <DocTitle docId={doc.id} title={doc.title} />
       )}
 
-      <div className="outline">
-        {rootChildren.length === 0 && !query && (
-          <div className="node">
-            <div className="node-row">
-              <div className="node-content">
-                <div className="node-text empty" onMouseDown={addTrailingBullet}>
-                  <span className="placeholder">Click to start typing…</span>
+      {columnMode && rootId ? (
+        <ColumnBody
+          rootId={rootId}
+          count={columnCount(doc.settings.viewMode)}
+          fit={doc.settings.columnFit}
+          zoom={doc.settings.columnZoom}
+        />
+      ) : (
+        <>
+          <div className="outline">
+            {rootChildren.length === 0 && !query && (
+              <div className="node">
+                <div className="node-row">
+                  <div className="node-content">
+                    <div className="node-text empty" onMouseDown={addTrailingBullet}>
+                      <span className="placeholder">Click to start typing…</span>
+                    </div>
+                  </div>
                 </div>
               </div>
+            )}
+            {rootId &&
+              (visibleSet
+                ? rootChildren.filter((c) => visibleSet.has(c))
+                : rootChildren
+              ).map((cid) => <OutlineNode key={cid} id={cid} depth={0} visibleSet={visibleSet} />)}
+
+            {query && visibleSet && visibleSet.size === 0 && (
+              <div className="doc-empty">
+                <p>No bullets match “{filterQuery}”.</p>
+              </div>
+            )}
+          </div>
+
+          {!query && rootChildren.length > 0 && (
+            <div className="outline-tail" onClick={addTrailingBullet} title="Add a bullet">
+              <span>+ add bullet</span>
             </div>
-          </div>
-        )}
-        {rootId &&
-          (visibleSet
-            ? rootChildren.filter((c) => visibleSet.has(c))
-            : rootChildren
-          ).map((cid) => <OutlineNode key={cid} id={cid} depth={0} visibleSet={visibleSet} />)}
-
-        {query && visibleSet && visibleSet.size === 0 && (
-          <div className="doc-empty">
-            <p>No bullets match “{filterQuery}”.</p>
-          </div>
-        )}
-      </div>
-
-      {!query && rootChildren.length > 0 && (
-        <div className="outline-tail" onClick={addTrailingBullet} title="Add a bullet">
-          <span>+ add bullet</span>
-        </div>
+          )}
+        </>
       )}
 
       {zoomItem && <Backlinks title={plainText(zoomItem.text)} />}
+    </div>
+  );
+}
+
+// --------------------------------------------------------------------------
+// Multi-column layout: top-level blocks are distributed across N columns, and
+// can be shuffled left/right across the dividing lines.
+// --------------------------------------------------------------------------
+function ColumnBody({
+  rootId,
+  count,
+  fit,
+  zoom,
+}: {
+  rootId: string;
+  count: number;
+  fit: 'wrap' | 'scroll';
+  zoom: number;
+}) {
+  const items = useStore((s) => s.items);
+  const fontSize = useStore((s) => s.preferences.fontSize);
+  const children = items[rootId]?.children ?? [];
+
+  const cols: string[][] = Array.from({ length: count }, () => []);
+  for (const id of children) {
+    const c = Math.min(count - 1, Math.max(0, items[id]?.column ?? 0));
+    cols[c].push(id);
+  }
+
+  const addInColumn = (col: number) => {
+    const s = useStore.getState();
+    s.insertChild(rootId);
+    const nid = useStore.getState().focus?.id;
+    if (nid) useStore.getState().setItemColumn(nid, col);
+  };
+
+  const style: React.CSSProperties =
+    fit === 'scroll'
+      ? ({ ['--font-size' as string]: `${fontSize * zoom}px` } as React.CSSProperties)
+      : { gridTemplateColumns: `repeat(${count}, minmax(0, 1fr))` };
+
+  return (
+    <div className={'columns ' + fit} style={style}>
+      {cols.map((ids, i) => (
+        <div className="column" key={i}>
+          {ids.map((id) => (
+            <ColumnBlock key={id} id={id} col={i} count={count} />
+          ))}
+          <div className="col-add" onClick={() => addInColumn(i)} title="Add a block to this column">
+            + block
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function ColumnBlock({ id, col, count }: { id: string; col: number; count: number }) {
+  const move = (dir: -1 | 1) => useStore.getState().setItemColumn(id, col + dir);
+  return (
+    <div className="col-block">
+      <div className="col-move">
+        <button className="col-move-btn" disabled={col === 0} title="Move left" onClick={() => move(-1)}>
+          ◀
+        </button>
+        <button
+          className="col-move-btn"
+          disabled={col === count - 1}
+          title="Move right"
+          onClick={() => move(1)}
+        >
+          ▶
+        </button>
+      </div>
+      <OutlineNode id={id} depth={0} visibleSet={null} />
     </div>
   );
 }

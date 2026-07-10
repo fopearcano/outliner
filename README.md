@@ -26,12 +26,15 @@ telemetry — your notes never leave the machine.
 
 ### Rich inline markdown (color‑coded like syntax tokens)
 `**bold**` · `*italic*` · `~~strike~~` · `` `code` `` · `==highlight==` ·
-`[label](url)` · `#tag` · `@mention` · `[[internal link]]` · `!(2026-07-10)` dates
+`[label](url)` · `#tag` · `@mention` · `[[internal link]]` · `!(2026-07-10)` dates ·
+`.word` (fuchsia) · standalone `-` / `*` markers (carmine)
 
 - **#tags** and **@mentions** are clickable and collected into a tag pane
 - **[[internal links]]** jump between bullets, with automatic **backlinks**
 - **!(date)** tokens render as friendly labels (“Today”, “Tomorrow”, “Fri”),
   flag overdue items, and support **recurrence** (daily / weekly / monthly / yearly)
+- **Per-word formatting** — select any word(s) inside a bullet and a floating
+  toolbar (bold / italic / strike / code / highlight) applies to just that span
 
 ### Organize
 - **Documents & folders** in a draggable sidebar
@@ -53,9 +56,19 @@ telemetry — your notes never leave the machine.
 - **Custom CSS**, adjustable font size and accent color
 - **Checkbox mode** & **numbered lists** per document
 
+### Styling
+- **Box a bullet** — give any bullet a border with a chosen color and stroke
+  width (right-click → *Box border*)
+- **Color labels** on bullets, **headings**, and per-document numbered lists
+
 ### Views & themes
 - **Three themes** — Dark (VSCode “Dark+”), Darker (near-black), and Light
   (VSCode “Light+”) — switchable from the **View** menu
+- **Column views** — switch a document to **2- or 3-column** layout (View →
+  Layout). Move top-level blocks left/right across the dividing lines, and pick
+  how columns handle width: **Fit width** (wrap text to the column) or
+  **Scroll + zoom** (fixed-width columns that scroll horizontally, with a zoom
+  slider).
 - **View options** popover: show/hide completed items, show/hide notes, compact
   spacing, font size, and per-document settings
 - **Collapsible sidebar** (`Ctrl/⌘+\`) for a distraction-free full-width outline

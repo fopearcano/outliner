@@ -31,6 +31,10 @@ const RULES: Rule[] = [
   { name: 'date', re: /!\(([^)]+?)\)/ },
   { name: 'tag', re: /(?<!\S)#([\p{L}\p{N}_\-/]+)/u },
   { name: 'mention', re: /(?<!\S)@([\p{L}\p{N}_\-/]+)/u },
+  // A dot immediately before a word → fuchsia (e.g. .todo).
+  { name: 'dot', re: /(?<!\S)\.([\p{L}\p{N}_][\p{L}\p{N}_\-/]*)/u },
+  // A standalone dash or asterisk marker → carmine red (e.g. "- item", "* item").
+  { name: 'mark', re: /(?<!\S)([-*])(?!\S)/ },
   { name: 'url', re: /(?<!\S)(https?:\/\/[^\s)]+)/ },
 ];
 
@@ -152,6 +156,26 @@ function renderToken(
           }}
         >
           @{inner}
+        </span>
+      );
+    case 'dot':
+      return (
+        <span
+          key={key}
+          className="md-dot"
+          onMouseDown={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            opts.onTag?.('.' + inner);
+          }}
+        >
+          .{inner}
+        </span>
+      );
+    case 'mark':
+      return (
+        <span key={key} className="md-mark">
+          {inner}
         </span>
       );
     case 'date': {

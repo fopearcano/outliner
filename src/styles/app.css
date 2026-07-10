@@ -463,6 +463,93 @@
   min-width: 0;
   padding: 1px 0;
 }
+.node-content.boxed {
+  border-radius: 7px;
+  padding: 3px 10px;
+  margin: 2px 0;
+}
+
+/* ----------------------------- Column views --------------------------- */
+.doc-view.wide {
+  max-width: 1400px;
+}
+.columns {
+  margin-top: 6px;
+}
+.columns.wrap {
+  display: grid;
+  gap: 0;
+  align-items: start;
+}
+.columns.scroll {
+  display: flex;
+  gap: 0;
+  align-items: flex-start;
+  overflow-x: auto;
+  padding-bottom: 12px;
+}
+.column {
+  min-width: 0;
+  padding: 4px 18px;
+  border-left: 1px solid var(--guide);
+}
+.column:first-child {
+  border-left: none;
+  padding-left: 2px;
+}
+.columns.scroll .column {
+  flex: 0 0 auto;
+  width: 460px;
+}
+.col-block {
+  position: relative;
+}
+.col-move {
+  position: absolute;
+  top: 1px;
+  right: 0;
+  display: none;
+  gap: 2px;
+  z-index: 3;
+}
+.col-block:hover > .col-move {
+  display: flex;
+}
+.col-move-btn {
+  width: 20px;
+  height: 20px;
+  border-radius: 4px;
+  background: var(--bg-elev2);
+  border: 1px solid var(--border);
+  color: var(--text-dim);
+  font-size: 9px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.col-move-btn:hover:not(:disabled) {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+.col-move-btn:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+.col-add {
+  color: var(--text-muted);
+  font-size: 12px;
+  padding: 6px 4px 6px 20px;
+  cursor: text;
+  opacity: 0;
+  transition: opacity 0.12s;
+}
+.column:hover .col-add {
+  opacity: 0.6;
+}
+.col-add:hover {
+  opacity: 1;
+  color: var(--accent);
+}
 .node-text {
   outline: none;
   white-space: pre-wrap;
@@ -1278,6 +1365,52 @@ textarea.node-note {
 .att-image .att-remove:hover {
   color: var(--tok-red);
   background: var(--bg-elev);
+}
+
+/* --------------------------- Format toolbar --------------------------- */
+.fmt-toolbar {
+  position: fixed;
+  z-index: 150;
+  transform: translate(-50%, -100%);
+  display: flex;
+  gap: 2px;
+  padding: 3px;
+  background: var(--bg-elev2);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  box-shadow: var(--shadow);
+  animation: fade 0.08s ease;
+}
+.fmt-btn {
+  width: 28px;
+  height: 26px;
+  border-radius: 5px;
+  color: var(--text-dim);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+}
+.fmt-btn:hover {
+  background: var(--sel);
+  color: var(--sel-text);
+}
+.fmt-btn.fmt-b {
+  font-weight: 800;
+}
+.fmt-btn.fmt-i {
+  font-style: italic;
+}
+.fmt-btn.fmt-s {
+  text-decoration: line-through;
+}
+.fmt-btn.fmt-code {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--tok-orange);
+}
+.fmt-btn.fmt-h {
+  color: var(--tok-yellow);
 }
 
 /* --------------------------- Reconnect banner ------------------------- */

@@ -2,7 +2,9 @@
 import { useEffect, useRef } from 'react';
 import { useStore } from '../store/store';
 import { useUi } from './ui-context';
-import { COLOR_LABELS } from '../types';
+import { COLOR_LABELS, COLOR_HEX } from '../types';
+
+const BOX_WIDTHS = [1, 2, 3, 4, 6];
 
 interface Props {
   itemId: string;
@@ -32,6 +34,7 @@ export default function ContextMenu({ itemId, x, y, onClose }: Props) {
 
   if (!item) return null;
   const s = useStore.getState();
+  const box = item.box;
   const act = (fn: () => void) => () => {
     fn();
     onClose();
@@ -87,6 +90,36 @@ export default function ContextMenu({ itemId, x, y, onClose }: Props) {
           />
         ))}
       </div>
+
+      <div className="ctx-label">Box border</div>
+      <div className="ctx-row colors">
+        <button
+          className={'color-dot none' + (!item.box ? ' on' : '')}
+          title="No box"
+          onClick={() => s.setBox(itemId, null)}
+        />
+        {COLOR_LABELS.map((c) => (
+          <button
+            key={c}
+            className={'color-dot ' + c + (item.box?.color === COLOR_HEX[c] ? ' on' : '')}
+            title={'Box ' + c}
+            onClick={() => s.setBox(itemId, { color: COLOR_HEX[c], width: item.box?.width ?? 2 })}
+          />
+        ))}
+      </div>
+      {box && (
+        <div className="ctx-row">
+          {BOX_WIDTHS.map((w) => (
+            <button
+              key={w}
+              className={'ctx-chip' + (box.width === w ? ' on' : '')}
+              onClick={() => s.setBox(itemId, { color: box.color, width: w })}
+            >
+              {w}px
+            </button>
+          ))}
+        </div>
+      )}
       <div className="ctx-sep" />
 
       <button className="ctx-item" onClick={act(() => ui.openDatePicker(itemId, null, null))}>

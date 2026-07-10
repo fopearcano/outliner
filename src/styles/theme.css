@@ -28,6 +28,8 @@
   --tok-purple: #c586c0;
   --tok-red: #f44747;
   --tok-pink: #d16d9e;
+  --tok-fuchsia: #ec5fd0;
+  --tok-carmine: #ff4d4d;
 
   /* color labels */
   --c-red: #f44747;
@@ -100,6 +102,8 @@
   --tok-purple: #af00db;
   --tok-red: #cd3131;
   --tok-pink: #b5299e;
+  --tok-fuchsia: #c81e9b;
+  --tok-carmine: #d0342c;
 
   --c-red: #cd3131;
   --c-orange: #b45309;
@@ -247,6 +251,18 @@ kbd {
 }
 .md-ilink:hover {
   background: rgba(78, 201, 176, 0.12);
+}
+.md-dot {
+  color: var(--tok-fuchsia);
+  cursor: pointer;
+  font-weight: 500;
+}
+.md-dot:hover {
+  text-decoration: underline;
+}
+.md-mark {
+  color: var(--tok-carmine);
+  font-weight: 700;
 }
 strong {
   color: var(--text-bright);

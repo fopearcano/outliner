@@ -11,6 +11,7 @@ import ImportExport from './components/ImportExport';
 import DatePicker from './components/DatePicker';
 import MoveDialog from './components/MoveDialog';
 import ContextMenu from './components/ContextMenu';
+import FormatToolbar from './components/FormatToolbar';
 import { UiContext, type UiApi } from './components/ui-context';
 import { findItemByTitle } from './store/selectors';
 
@@ -194,6 +195,8 @@ export default function App() {
           <ReconnectBanner />
           <DocumentView />
         </main>
+
+        <FormatToolbar />
 
         <input
           ref={fileInputRef}

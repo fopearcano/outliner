@@ -27,11 +27,25 @@ export interface OutlineItem {
   heading: number;
   /** Named color label, or null. Maps to a palette entry. */
   color: ColorLabel | null;
+  /** Optional box/border drawn around the bullet. */
+  box: BoxStyle | null;
+  /** Lane index for the multi-column views (0-based). Ignored in outline view. */
+  column: number;
   /** Image / file attachments (stored inline as data URLs). */
   attachments: Attachment[];
   createdAt: number;
   modifiedAt: number;
 }
+
+/** A border drawn around a bullet in any view. */
+export interface BoxStyle {
+  /** CSS color (hex). */
+  color: string;
+  /** Stroke width in px. */
+  width: number;
+}
+
+export const DEFAULT_BOX: BoxStyle = { color: '#4ec9b0', width: 2 };
 
 /** An image or file attached to a bullet, stored locally as a data URL. */
 export interface Attachment {
@@ -69,6 +83,19 @@ export const COLOR_LABELS: ColorLabel[] = [
   'gray',
 ];
 
+/** Concrete hex for each color label (used where a fixed CSS color is needed). */
+export const COLOR_HEX: Record<ColorLabel, string> = {
+  red: '#f44747',
+  orange: '#ce9178',
+  yellow: '#dcdcaa',
+  green: '#6a9955',
+  cyan: '#4ec9b0',
+  blue: '#569cd6',
+  purple: '#c586c0',
+  pink: '#d16d9e',
+  gray: '#858585',
+};
+
 /** A sidebar entry: either a document (owns an outline) or a folder (holds docs). */
 export interface Doc {
   id: string;
@@ -88,17 +115,35 @@ export interface Doc {
   modifiedAt: number;
 }
 
+/** Layout of the document body. */
+export type ViewMode = 'outline' | 'col2' | 'col3';
+/** How columns handle text that's wider than the column. */
+export type ColumnFit = 'wrap' | 'scroll';
+
 export interface DocSettings {
   /** New bullets become checkboxes by default. */
   checkboxMode: boolean;
   /** Render bullets as a numbered (1. 2. 3.) list. */
   numbered: boolean;
+  /** outline (default) | 2-column | 3-column. */
+  viewMode: ViewMode;
+  /** In column views: wrap text to the column, or scroll horizontally + zoom. */
+  columnFit: ColumnFit;
+  /** Zoom factor used in column "scroll" fit (0.5–2). */
+  columnZoom: number;
 }
 
 export const DEFAULT_DOC_SETTINGS: DocSettings = {
   checkboxMode: false,
   numbered: false,
+  viewMode: 'outline',
+  columnFit: 'wrap',
+  columnZoom: 1,
 };
+
+export function columnCount(mode: ViewMode): number {
+  return mode === 'col3' ? 3 : mode === 'col2' ? 2 : 1;
+}
 
 /** Available color themes. */
 export type ThemeName = 'dark' | 'darker' | 'light';

@@ -9,6 +9,7 @@ import {
   type Preferences,
   type ColorLabel,
   type Attachment,
+  type BoxStyle,
   type PersistedState,
   DEFAULT_PREFERENCES,
   DEFAULT_DOC_SETTINGS,
@@ -130,6 +131,8 @@ export interface StoreState {
   cycleHeading: (id: string) => void;
   setHeading: (id: string, level: number) => void;
   setColor: (id: string, color: ColorLabel | null) => void;
+  setBox: (id: string, box: BoxStyle | null) => void;
+  setItemColumn: (id: string, column: number) => void;
   addAttachments: (id: string, attachments: Attachment[]) => void;
   removeAttachment: (id: string, attachmentId: string) => void;
   duplicateItem: (id: string) => void;
@@ -175,9 +178,24 @@ let currentHandle: FileSystemFileHandle | null = null;
 /** Backfill fields that may be missing from older / imported data. */
 function normalizeItems(items: ItemMap): ItemMap {
   for (const id in items) {
-    if (!items[id].attachments) items[id] = { ...items[id], attachments: [] };
+    const it = items[id];
+    if (!it.attachments || it.box === undefined || it.column === undefined) {
+      items[id] = {
+        ...it,
+        attachments: it.attachments ?? [],
+        box: it.box ?? null,
+        column: it.column ?? 0,
+      };
+    }
   }
   return items;
+}
+
+function normalizeDocs(docs: Record<string, Doc>): Record<string, Doc> {
+  for (const id in docs) {
+    docs[id] = { ...docs[id], settings: { ...DEFAULT_DOC_SETTINGS, ...docs[id].settings } };
+  }
+  return docs;
 }
 
 function snapshot(s: StoreState): Snapshot {
@@ -218,7 +236,7 @@ export const useStore = create<StoreState>((set, get) => {
   const applyPersisted = (p: PersistedState) => {
     set({
       items: normalizeItems({ ...p.items }),
-      docs: p.docs,
+      docs: normalizeDocs({ ...p.docs }),
       rootDocIds: p.rootDocIds,
       currentDocId: p.currentDocId ?? p.rootDocIds[0] ?? null,
       preferences: { ...DEFAULT_PREFERENCES, ...p.preferences },
@@ -260,7 +278,7 @@ export const useStore = create<StoreState>((set, get) => {
       if (persisted && persisted.rootDocIds.length) {
         set({
           items: normalizeItems({ ...persisted.items }),
-          docs: persisted.docs,
+          docs: normalizeDocs({ ...persisted.docs }),
           rootDocIds: persisted.rootDocIds,
           currentDocId: persisted.currentDocId ?? persisted.rootDocIds[0] ?? null,
           preferences: { ...DEFAULT_PREFERENCES, ...persisted.preferences },
@@ -850,6 +868,24 @@ export const useStore = create<StoreState>((set, get) => {
         const item = s.items[id];
         if (!item) return {};
         return { items: { ...s.items, [id]: touch({ ...item, color }) } };
+      });
+    },
+
+    setBox: (id, box) => {
+      pushHistory();
+      set((s) => {
+        const item = s.items[id];
+        if (!item) return {};
+        return { items: { ...s.items, [id]: touch({ ...item, box }) } };
+      });
+    },
+
+    setItemColumn: (id, column) => {
+      pushHistory();
+      set((s) => {
+        const item = s.items[id];
+        if (!item) return {};
+        return { items: { ...s.items, [id]: touch({ ...item, column: Math.max(0, column) }) } };
       });
     },
 

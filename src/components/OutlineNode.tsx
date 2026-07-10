@@ -436,7 +436,14 @@ export default function OutlineNode({ id, depth, visibleSet }: Props) {
           )}
         </span>
 
-        <div className="node-content">
+        <div
+          className={'node-content' + (item.box ? ' boxed' : '')}
+          style={
+            item.box
+              ? { border: `${item.box.width}px solid ${item.box.color}` }
+              : undefined
+          }
+        >
           {editing ? (
             <Editable
               ref={editRef}
