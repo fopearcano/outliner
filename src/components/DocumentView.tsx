@@ -1,10 +1,11 @@
 // ---------------------------------------------------------------------------
 // The main pane: breadcrumb + (optional) zoom title + filter bar + outline.
 // ---------------------------------------------------------------------------
-import React, { useMemo } from 'react';
+import React, { useMemo, useRef } from 'react';
 import { useStore, currentRootItemId } from '../store/store';
 import OutlineNode from './OutlineNode';
 import { ancestorIds } from '../lib/tree';
+import { getCaretOffset } from '../lib/caret';
 import { parseQuery, matchItem } from '../lib/search';
 import { plainText, renderInline } from '../lib/markdown';
 import { useUi } from './ui-context';
@@ -205,18 +206,51 @@ function ColumnBlock({
   count: number;
   index: number;
 }) {
-  const move = (dir: -1 | 1) => useStore.getState().setItemColumn(id, col + dir);
+  const ref = useRef<HTMLDivElement>(null);
+
+  // Moving a block to another column re-parents it in the DOM, so React
+  // remounts its subtree. If the block (or one of its children) is being
+  // edited, capture the caret first and re-issue a focus request afterward so
+  // the remounted editor re-opens at the same spot — no lost typing.
+  const move = (dir: -1 | 1) => {
+    const active = document.activeElement as HTMLElement | null;
+    let focusId: string | null = null;
+    let caret: number | 'end' = 'end';
+    if (
+      active &&
+      ref.current?.contains(active) &&
+      active.isContentEditable &&
+      active.classList.contains('node-text')
+    ) {
+      focusId = (active.closest('.node') as HTMLElement | null)?.dataset.id ?? null;
+      caret = getCaretOffset(active);
+    }
+    useStore.getState().setItemColumn(id, col + dir);
+    if (focusId) useStore.getState().requestFocus(focusId, caret);
+  };
+
   return (
-    <div className="col-block">
+    <div className="col-block" ref={ref}>
       <div className="col-move">
-        <button className="col-move-btn" disabled={col === 0} title="Move left" onClick={() => move(-1)}>
+        <button
+          className="col-move-btn"
+          disabled={col === 0}
+          title="Move left"
+          onMouseDown={(e) => {
+            e.preventDefault();
+            move(-1);
+          }}
+        >
           ◀
         </button>
         <button
           className="col-move-btn"
           disabled={col === count - 1}
           title="Move right"
-          onClick={() => move(1)}
+          onMouseDown={(e) => {
+            e.preventDefault();
+            move(1);
+          }}
         >
           ▶
         </button>
