@@ -58,6 +58,12 @@ export default function OutlineNode({ id, depth, visibleSet, numberOverride }: P
   const editRef = useRef<EditableHandle>(null);
   const noteRef = useRef<HTMLTextAreaElement>(null);
   const pendingCaret = useRef<'start' | 'end' | number | null>(null);
+  // Tell a genuine bullet click (→ zoom in) apart from a small drag-grab. A
+  // press that travels more than a few px is a move gesture, not a click, and
+  // must NOT zoom — otherwise trying to nudge a bullet swaps the whole outline
+  // for that block's contents ("everything moves").
+  const bulletDown = useRef<{ x: number; y: number } | null>(null);
+  const bulletMoved = useRef(false);
 
   const applyCaret = () => {
     const el = editRef.current?.el;
@@ -329,6 +335,7 @@ export default function OutlineNode({ id, depth, visibleSet, numberOverride }: P
   // ------------------------------------------------------------------ DnD
   const onDragStart = (e: React.DragEvent) => {
     e.stopPropagation();
+    bulletMoved.current = true; // a real drag is never a zoom click
     e.dataTransfer.effectAllowed = 'move';
     e.dataTransfer.setData('text/plain', id);
     useDragStore.getState().start(id);
@@ -420,9 +427,26 @@ export default function OutlineNode({ id, depth, visibleSet, numberOverride }: P
               (numbered ? ' numbered' : '')
             }
             draggable
+            onPointerDown={(e) => {
+              bulletDown.current = { x: e.clientX, y: e.clientY };
+              bulletMoved.current = false;
+            }}
+            onPointerMove={(e) => {
+              const d = bulletDown.current;
+              if (d && Math.hypot(e.clientX - d.x, e.clientY - d.y) > 2) {
+                bulletMoved.current = true;
+              }
+            }}
             onDragStart={onDragStart}
             onDragEnd={() => useDragStore.getState().end()}
-            onClick={() => store.zoomIn(id)}
+            onClick={() => {
+              // Swallow the click that ends a drag-grab; only a still click zooms.
+              if (bulletMoved.current) {
+                bulletMoved.current = false;
+                return;
+              }
+              store.zoomIn(id);
+            }}
             title="Click to zoom in · drag to move"
           >
             {numbered ? (
