@@ -580,6 +580,10 @@
   width: 49%;
   min-width: 0;
 }
+/* per-depth indent inside a cell so nesting stays legible in the flat L-R list */
+.lr-indent {
+  min-width: 0;
+}
 .lr-move {
   position: absolute;
   top: 1px;

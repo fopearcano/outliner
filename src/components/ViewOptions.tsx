@@ -111,8 +111,9 @@ export default function ViewOptions() {
               </div>
               {doc.settings.viewMode === 'lr' && (
                 <p className="muted" style={{ margin: '8px 6px 0' }}>
-                  Move a block ◀ / ▶ to sit left or right of the centre line; its
-                  row and number stay put.
+                  Move any block ◀ / ▶ to sit left or right of the centre line —
+                  each one moves independently (even nested ones), keeping its row
+                  and number.
                 </p>
               )}
               {doc.settings.viewMode === 'col2' && (

@@ -25,13 +25,16 @@ interface Props {
   visibleSet: Set<string> | null;
   /** Overrides the numbered-list index (used by column views for per-column numbering). */
   numberOverride?: number;
+  /** L-R view: render only this block's own row, not its children (they are
+   * separate, independently-positioned rows). */
+  flat?: boolean;
 }
 
 function isMod(e: React.KeyboardEvent): boolean {
   return e.metaKey || e.ctrlKey;
 }
 
-export default function OutlineNode({ id, depth, visibleSet, numberOverride }: Props) {
+export default function OutlineNode({ id, depth, visibleSet, numberOverride, flat }: Props) {
   const item = useStore((s) => s.items[id]);
   const prefs = useStore((s) => s.preferences);
   const myFocus = useStore((s) => (s.focus && s.focus.id === id ? s.focus : null));
@@ -565,7 +568,7 @@ export default function OutlineNode({ id, depth, visibleSet, numberOverride }: P
         </div>
       </div>
 
-      {showChildren && (
+      {showChildren && !flat && (
         <div className="children">
           {childIds.map((cid) => (
             <OutlineNode key={cid} id={cid} depth={depth + 1} visibleSet={visibleSet} />

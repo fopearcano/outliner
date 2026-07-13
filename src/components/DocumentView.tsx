@@ -18,6 +18,7 @@ export default function DocumentView() {
   const items = useStore((s) => s.items);
   const filterQuery = useStore((s) => s.filterQuery);
   const rootId = useStore((s) => currentRootItemId(s));
+  const showCompleted = useStore((s) => s.preferences.showCompleted);
 
   const query = useMemo(() => (filterQuery.trim() ? parseQuery(filterQuery) : null), [filterQuery]);
 
@@ -81,6 +82,26 @@ export default function DocumentView() {
       ? rootChildren.filter((c) => (items[c]?.column ?? 0) === 0)
       : rootChildren;
 
+  // L-R view: flatten the visible tree so EVERY block (at any depth) is its own
+  // row that can be shifted left/right of the centre line independently, while
+  // keeping its vertical position, indent depth and sibling number. (A parent no
+  // longer drags its children across — each block carries its own `lr` side.)
+  const lrRows: { id: string; depth: number; number: number }[] = [];
+  if (showLr) {
+    const walk = (ids: string[], depth: number) => {
+      let n = 0;
+      for (const cid of ids) {
+        const it = items[cid];
+        if (!it) continue;
+        if (showCompleted === false && it.completed) continue;
+        lrRows.push({ id: cid, depth, number: n });
+        n++;
+        if (!it.collapsed && it.children.length) walk(it.children, depth + 1);
+      }
+    };
+    walk(outlineChildren, 0);
+  }
+
   return (
     <div className={'doc-view' + (wide ? ' wide' : '')}>
       <div className="breadcrumb">
@@ -109,7 +130,7 @@ export default function DocumentView() {
       {showColumns && rootId ? (
         <ColumnBody rootId={rootId} fit={doc.settings.columnFit} zoom={doc.settings.columnZoom} />
       ) : showLr && rootId ? (
-        <LrBody rootId={rootId} childIds={outlineChildren} />
+        <LrBody rootId={rootId} rows={lrRows} />
       ) : (
         <>
           <div className="outline">
@@ -282,11 +303,11 @@ function ColumnBlock({
 // or back to the right. Toggling sides only swaps a CSS class, so — unlike the
 // column view — editing is never interrupted.
 // --------------------------------------------------------------------------
-function LrBody({ rootId, childIds }: { rootId: string; childIds: string[] }) {
+function LrBody({ rootId, rows }: { rootId: string; rows: { id: string; depth: number; number: number }[] }) {
   return (
     <div className="lr">
-      {childIds.map((id, index) => (
-        <LrBlock key={id} id={id} index={index} />
+      {rows.map((r) => (
+        <LrBlock key={r.id} id={r.id} depth={r.depth} number={r.number} />
       ))}
       <div
         className="col-add lr-add"
@@ -299,7 +320,7 @@ function LrBody({ rootId, childIds }: { rootId: string; childIds: string[] }) {
   );
 }
 
-function LrBlock({ id, index }: { id: string; index: number }) {
+function LrBlock({ id, depth, number }: { id: string; depth: number; number: number }) {
   const side = useStore((s) => s.items[id]?.lr ?? 'right');
   const setSide = (to: LrSide) => useStore.getState().setItemLr(id, to);
   return (
@@ -329,7 +350,9 @@ function LrBlock({ id, index }: { id: string; index: number }) {
             ▶
           </button>
         </div>
-        <OutlineNode id={id} depth={0} visibleSet={null} numberOverride={index} />
+        <div className="lr-indent" style={depth ? { paddingLeft: depth * 20 } : undefined}>
+          <OutlineNode id={id} depth={0} visibleSet={null} numberOverride={number} flat />
+        </div>
       </div>
     </div>
   );
