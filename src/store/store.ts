@@ -137,6 +137,7 @@ export interface StoreState {
   setBox: (id: string, box: BoxStyle | null) => void;
   setItemColumn: (id: string, column: number) => void;
   setItemLr: (id: string, lr: LrSide) => void;
+  setSubtreeLr: (id: string, lr: LrSide) => void;
   addAttachments: (id: string, attachments: Attachment[]) => void;
   removeAttachment: (id: string, attachmentId: string) => void;
   duplicateItem: (id: string) => void;
@@ -923,6 +924,28 @@ export const useStore = create<StoreState>((set, get) => {
         const item = s.items[id];
         if (!item) return {};
         return { items: { ...s.items, [id]: touch({ ...item, lr }) } };
+      });
+    },
+
+    // Move a block AND its whole subtree to one side of the L-R centre line.
+    setSubtreeLr: (id, lr) => {
+      const s0 = get();
+      if (!s0.items[id]) return;
+      const ids: string[] = [];
+      const stack = [id];
+      while (stack.length) {
+        const cur = stack.pop() as string;
+        const it = s0.items[cur];
+        if (!it) continue;
+        ids.push(cur);
+        for (const c of it.children) stack.push(c);
+      }
+      if (ids.every((i) => s0.items[i].lr === lr)) return; // already aligned — no-op
+      pushHistory();
+      set((s) => {
+        const items = { ...s.items };
+        for (const i of ids) if (items[i]) items[i] = touch({ ...items[i], lr });
+        return { items };
       });
     },
 

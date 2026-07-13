@@ -535,6 +535,11 @@
   opacity: 0.3;
   cursor: default;
 }
+/* L-R: the arrow for the side the block currently sits on */
+.col-move-btn.on {
+  color: var(--accent);
+  border-color: var(--accent);
+}
 .col-add {
   color: var(--text-muted);
   font-size: 12px;

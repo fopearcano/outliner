@@ -113,7 +113,8 @@ export default function ViewOptions() {
                 <p className="muted" style={{ margin: '8px 6px 0' }}>
                   Move any block ◀ / ▶ to sit left or right of the centre line —
                   each one moves independently (even nested ones), keeping its row
-                  and number.
+                  and number. Hold <b>⌥ Alt</b> to move a block with all its
+                  sub-items.
                 </p>
               )}
               {doc.settings.viewMode === 'col2' && (

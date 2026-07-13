@@ -322,30 +322,32 @@ function LrBody({ rootId, rows }: { rootId: string; rows: { id: string; depth: n
 
 function LrBlock({ id, depth, number }: { id: string; depth: number; number: number }) {
   const side = useStore((s) => s.items[id]?.lr ?? 'right');
-  const setSide = (to: LrSide) => useStore.getState().setItemLr(id, to);
+  const hasKids = useStore((s) => (s.items[id]?.children.length ?? 0) > 0);
+  // Plain click moves just this block; Alt/⌥ moves it with its whole subtree.
+  // Buttons stay enabled even on the block's current side so Alt can re-align
+  // any stragglers under it; a plain same-side click is a harmless no-op.
+  const move = (to: LrSide, e: React.MouseEvent) => {
+    e.preventDefault();
+    const st = useStore.getState();
+    if (e.altKey) st.setSubtreeLr(id, to);
+    else if (side !== to) st.setItemLr(id, to);
+  };
+  const tip = (dir: string) => `Move ${dir} of the line` + (hasKids ? ' · ⌥ with sub-items' : '');
   return (
     <div className={'lr-row ' + side}>
       <div className="lr-cell">
         <div className="lr-move">
           <button
-            className="col-move-btn"
-            disabled={side === 'left'}
-            title="Move left of the line"
-            onMouseDown={(e) => {
-              e.preventDefault();
-              setSide('left');
-            }}
+            className={'col-move-btn' + (side === 'left' ? ' on' : '')}
+            title={tip('left')}
+            onMouseDown={(e) => move('left', e)}
           >
             ◀
           </button>
           <button
-            className="col-move-btn"
-            disabled={side === 'right'}
-            title="Move right of the line"
-            onMouseDown={(e) => {
-              e.preventDefault();
-              setSide('right');
-            }}
+            className={'col-move-btn' + (side === 'right' ? ' on' : '')}
+            title={tip('right')}
+            onMouseDown={(e) => move('right', e)}
           >
             ▶
           </button>
