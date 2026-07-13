@@ -581,8 +581,9 @@ export const useStore = create<StoreState>((set, get) => {
         const items = { ...s.items };
         const parentId = item.parent;
         const newItem = makeItem(parentId, { text: after ?? '', checkbox: item.checkbox });
-        // Inherit the column so a new sibling stays in the same column-view lane.
+        // Inherit column + L-R side so a new sibling stays in the same lane/side.
         newItem.column = item.column;
+        newItem.lr = item.lr;
         // Apply text split to the original if provided.
         if (before !== undefined) items[id] = touch({ ...item, text: before });
         // If the source is expanded with children, the new node becomes its
@@ -1116,8 +1117,25 @@ export const useStore = create<StoreState>((set, get) => {
         cur = items[cur].parent;
       }
       const doc = Object.values(s.docs).find((d) => d.rootItemId === rootItemId);
+
+      // The item's top-level ancestor lives in the independent 2nd column iff
+      // it's hidden in the outline / L-R views. In that case switch the doc to
+      // the 2-column view so the revealed item is actually visible + focusable.
+      let top = itemId;
+      const g2 = new Set<string>();
+      while (items[top]?.parent && items[top].parent !== rootItemId && !g2.has(top)) {
+        g2.add(top);
+        top = items[top].parent as string;
+      }
+      const stashed = !!(items[top] && (items[top].column ?? 0) >= 1);
+      let docs = s.docs;
+      if (doc && stashed && doc.settings.viewMode !== 'col2') {
+        docs = { ...s.docs, [doc.id]: { ...doc, settings: { ...doc.settings, viewMode: 'col2' } } };
+      }
+
       set({
         items,
+        docs,
         currentDocId: doc ? doc.id : s.currentDocId,
         zoomItemId: null,
         filterQuery: '',

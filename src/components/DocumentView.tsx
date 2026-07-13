@@ -125,8 +125,16 @@ export default function DocumentView() {
               </div>
             )}
             {rootId &&
-              outlineChildren.map((cid) => (
-                <OutlineNode key={cid} id={cid} depth={0} visibleSet={visibleSet} />
+              outlineChildren.map((cid, i) => (
+                <OutlineNode
+                  key={cid}
+                  id={cid}
+                  depth={0}
+                  visibleSet={visibleSet}
+                  // Number contiguously at the doc root so hiding the 2nd-column
+                  // stash doesn't leave gaps (e.g. 1, 3). Zoom/filter keep native.
+                  numberOverride={atRoot && !query ? i : undefined}
+                />
               ))}
 
             {query && visibleSet && visibleSet.size === 0 && (
