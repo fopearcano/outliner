@@ -29,8 +29,10 @@ export interface OutlineItem {
   color: ColorLabel | null;
   /** Optional box/border drawn around the bullet. */
   box: BoxStyle | null;
-  /** Lane index for the multi-column views (0-based). Ignored in outline view. */
+  /** Column for the 2-column view (0 = main, 1 = the independent 2nd column). */
   column: number;
+  /** Side of the central line in the L-R view. Default 'right' (normal). */
+  lr: LrSide;
   /** Image / file attachments (stored inline as data URLs). */
   attachments: Attachment[];
   createdAt: number;
@@ -116,20 +118,22 @@ export interface Doc {
 }
 
 /** Layout of the document body. */
-export type ViewMode = 'outline' | 'col2' | 'col3';
+export type ViewMode = 'outline' | 'col2' | 'lr';
 /** How columns handle text that's wider than the column. */
 export type ColumnFit = 'wrap' | 'scroll';
+/** Which side of the central line a block sits on, in the L-R view. */
+export type LrSide = 'left' | 'right';
 
 export interface DocSettings {
   /** New bullets become checkboxes by default. */
   checkboxMode: boolean;
   /** Render bullets as a numbered (1. 2. 3.) list. */
   numbered: boolean;
-  /** outline (default) | 2-column | 3-column. */
+  /** outline (default) | 2-column | left-right. */
   viewMode: ViewMode;
-  /** In column views: wrap text to the column, or scroll horizontally + zoom. */
+  /** In the 2-column view: wrap text to the column, or scroll horizontally + zoom. */
   columnFit: ColumnFit;
-  /** Zoom factor used in column "scroll" fit (0.5–2). */
+  /** Zoom factor used in the column "scroll" fit (0.5–2). */
   columnZoom: number;
 }
 
@@ -140,10 +144,6 @@ export const DEFAULT_DOC_SETTINGS: DocSettings = {
   columnFit: 'wrap',
   columnZoom: 1,
 };
-
-export function columnCount(mode: ViewMode): number {
-  return mode === 'col3' ? 3 : mode === 'col2' ? 2 : 1;
-}
 
 /** Available color themes. */
 export type ThemeName = 'dark' | 'darker' | 'light';

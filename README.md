@@ -64,11 +64,14 @@ telemetry — your notes never leave the machine.
 ### Views & themes
 - **Three themes** — Dark (VSCode “Dark+”), Darker (near-black), and Light
   (VSCode “Light+”) — switchable from the **View** menu
-- **Column views** — switch a document to **2- or 3-column** layout (View →
-  Layout). Move top-level blocks left/right across the dividing lines, and pick
-  how columns handle width: **Fit width** (wrap text to the column) or
-  **Scroll + zoom** (fixed-width columns that scroll horizontally, with a zoom
-  slider).
+- **Layouts** (View → Layout) beyond the normal outline:
+  - **2-column** — an independent 2nd column. Move a top-level block into it
+    with the ▶ control; column-2 blocks live only here and are hidden in the
+    other views. Choose **Fit width** (wrap) or **Scroll + zoom** (fixed-width
+    columns that scroll horizontally, with a zoom slider).
+  - **L ↔ R** — shift any block to the left or right of a central line while it
+    keeps its row and its number in the list (great for two-sided / timeline
+    notes). Toggling sides never interrupts editing.
 - **View options** popover: show/hide completed items, show/hide notes, compact
   spacing, font size, and per-document settings
 - **Collapsible sidebar** (`Ctrl/⌘+\`) for a distraction-free full-width outline

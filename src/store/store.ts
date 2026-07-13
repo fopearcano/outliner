@@ -10,6 +10,7 @@ import {
   type ColorLabel,
   type Attachment,
   type BoxStyle,
+  type LrSide,
   type PersistedState,
   DEFAULT_PREFERENCES,
   DEFAULT_DOC_SETTINGS,
@@ -135,6 +136,7 @@ export interface StoreState {
   setColor: (id: string, color: ColorLabel | null) => void;
   setBox: (id: string, box: BoxStyle | null) => void;
   setItemColumn: (id: string, column: number) => void;
+  setItemLr: (id: string, lr: LrSide) => void;
   addAttachments: (id: string, attachments: Attachment[]) => void;
   removeAttachment: (id: string, attachmentId: string) => void;
   duplicateItem: (id: string) => void;
@@ -181,12 +183,13 @@ let currentHandle: FileSystemFileHandle | null = null;
 function normalizeItems(items: ItemMap): ItemMap {
   for (const id in items) {
     const it = items[id];
-    if (!it.attachments || it.box === undefined || it.column === undefined) {
+    if (!it.attachments || it.box === undefined || it.column === undefined || it.lr === undefined) {
       items[id] = {
         ...it,
         attachments: it.attachments ?? [],
         box: it.box ?? null,
         column: it.column ?? 0,
+        lr: it.lr ?? 'right',
       };
     }
   }
@@ -195,7 +198,10 @@ function normalizeItems(items: ItemMap): ItemMap {
 
 function normalizeDocs(docs: Record<string, Doc>): Record<string, Doc> {
   for (const id in docs) {
-    docs[id] = { ...docs[id], settings: { ...DEFAULT_DOC_SETTINGS, ...docs[id].settings } };
+    const settings = { ...DEFAULT_DOC_SETTINGS, ...docs[id].settings };
+    // The 3-column view was removed; fall back to 2 columns.
+    if ((settings.viewMode as string) === 'col3') settings.viewMode = 'col2';
+    docs[id] = { ...docs[id], settings };
   }
   return docs;
 }
@@ -907,6 +913,15 @@ export const useStore = create<StoreState>((set, get) => {
         const item = s.items[id];
         if (!item) return {};
         return { items: { ...s.items, [id]: touch({ ...item, column: Math.max(0, column) }) } };
+      });
+    },
+
+    setItemLr: (id, lr) => {
+      pushHistory();
+      set((s) => {
+        const item = s.items[id];
+        if (!item) return {};
+        return { items: { ...s.items, [id]: touch({ ...item, lr }) } };
       });
     },
 

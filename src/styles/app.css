@@ -550,6 +550,60 @@
   opacity: 1;
   color: var(--accent);
 }
+
+/* ------------------------------ L-R view ------------------------------ */
+.lr {
+  position: relative;
+  margin-top: 6px;
+}
+/* the central "indentation" line */
+.lr::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 0;
+  bottom: 0;
+  border-left: 1px solid var(--guide);
+  pointer-events: none;
+}
+.lr-row {
+  display: flex;
+}
+.lr-row.right {
+  justify-content: flex-end;
+}
+.lr-row.left {
+  justify-content: flex-start;
+}
+.lr-cell {
+  position: relative;
+  width: 49%;
+  min-width: 0;
+}
+.lr-move {
+  position: absolute;
+  top: 1px;
+  display: none;
+  gap: 2px;
+  z-index: 3;
+}
+.lr-row:hover .lr-move {
+  display: flex;
+}
+.lr-row.right .lr-move {
+  left: -46px;
+}
+.lr-row.left .lr-move {
+  right: -46px;
+}
+.lr .col-add {
+  opacity: 0.5;
+  padding-left: 4px;
+}
+.lr .col-add:hover {
+  opacity: 1;
+}
+
 .node-text {
   outline: none;
   white-space: pre-wrap;

@@ -97,7 +97,7 @@ export default function ViewOptions() {
                   [
                     ['outline', 'Outline'],
                     ['col2', '2 col'],
-                    ['col3', '3 col'],
+                    ['lr', 'L ↔ R'],
                   ] as const
                 ).map(([mode, label]) => (
                   <button
@@ -109,7 +109,13 @@ export default function ViewOptions() {
                   </button>
                 ))}
               </div>
-              {doc.settings.viewMode !== 'outline' && (
+              {doc.settings.viewMode === 'lr' && (
+                <p className="muted" style={{ margin: '8px 6px 0' }}>
+                  Move a block ◀ / ▶ to sit left or right of the centre line; its
+                  row and number stay put.
+                </p>
+              )}
+              {doc.settings.viewMode === 'col2' && (
                 <>
                   <div className="seg" style={{ marginTop: 6 }}>
                     {(

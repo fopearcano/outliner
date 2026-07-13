@@ -10,7 +10,7 @@ import { parseQuery, matchItem } from '../lib/search';
 import { plainText, renderInline } from '../lib/markdown';
 import { useUi } from './ui-context';
 import ViewOptions from './ViewOptions';
-import { columnCount } from '../types';
+import type { LrSide } from '../types';
 
 export default function DocumentView() {
   const doc = useStore((s) => (s.currentDocId ? s.docs[s.currentDocId] : null));
@@ -66,11 +66,23 @@ export default function DocumentView() {
     if (rootId) useStore.getState().insertChild(rootId);
   };
 
-  // Column layout only applies at the document root (not while zoomed or filtering).
-  const columnMode = doc.settings.viewMode !== 'outline' && !zoomItem && !query;
+  // Special layouts apply only at the document root (not zoomed / not filtering).
+  const atRoot = !zoomItem;
+  const vm = doc.settings.viewMode;
+  const showColumns = vm === 'col2' && atRoot && !query;
+  const showLr = vm === 'lr' && atRoot && !query;
+  const wide = showColumns || showLr;
+
+  // Which top-level children the plain outline / L-R views show. The independent
+  // 2nd column (column >= 1) is only visible in the 2-column view — hidden here.
+  const outlineChildren = query
+    ? rootChildren.filter((c) => visibleSet?.has(c))
+    : atRoot
+      ? rootChildren.filter((c) => (items[c]?.column ?? 0) === 0)
+      : rootChildren;
 
   return (
-    <div className={'doc-view' + (columnMode ? ' wide' : '')}>
+    <div className={'doc-view' + (wide ? ' wide' : '')}>
       <div className="breadcrumb">
         {crumbs.map((c, i) => (
           <React.Fragment key={c.id ?? 'root'}>
@@ -94,17 +106,14 @@ export default function DocumentView() {
         <DocTitle docId={doc.id} title={doc.title} />
       )}
 
-      {columnMode && rootId ? (
-        <ColumnBody
-          rootId={rootId}
-          count={columnCount(doc.settings.viewMode)}
-          fit={doc.settings.columnFit}
-          zoom={doc.settings.columnZoom}
-        />
+      {showColumns && rootId ? (
+        <ColumnBody rootId={rootId} fit={doc.settings.columnFit} zoom={doc.settings.columnZoom} />
+      ) : showLr && rootId ? (
+        <LrBody rootId={rootId} childIds={outlineChildren} />
       ) : (
         <>
           <div className="outline">
-            {rootChildren.length === 0 && !query && (
+            {outlineChildren.length === 0 && !query && (
               <div className="node">
                 <div className="node-row">
                   <div className="node-content">
@@ -116,10 +125,9 @@ export default function DocumentView() {
               </div>
             )}
             {rootId &&
-              (visibleSet
-                ? rootChildren.filter((c) => visibleSet.has(c))
-                : rootChildren
-              ).map((cid) => <OutlineNode key={cid} id={cid} depth={0} visibleSet={visibleSet} />)}
+              outlineChildren.map((cid) => (
+                <OutlineNode key={cid} id={cid} depth={0} visibleSet={visibleSet} />
+              ))}
 
             {query && visibleSet && visibleSet.size === 0 && (
               <div className="doc-empty">
@@ -128,7 +136,7 @@ export default function DocumentView() {
             )}
           </div>
 
-          {!query && rootChildren.length > 0 && (
+          {!query && outlineChildren.length > 0 && (
             <div className="outline-tail" onClick={addTrailingBullet} title="Add a bullet">
               <span>+ add bullet</span>
             </div>
@@ -142,17 +150,16 @@ export default function DocumentView() {
 }
 
 // --------------------------------------------------------------------------
-// Multi-column layout: top-level blocks are distributed across N columns, and
-// can be shuffled left/right across the dividing lines.
+// 2-column layout: the main column (0) plus an independent 2nd column (1).
+// Blocks in column 1 only exist here — they're hidden in the other views.
 // --------------------------------------------------------------------------
+const COLS = 2;
 function ColumnBody({
   rootId,
-  count,
   fit,
   zoom,
 }: {
   rootId: string;
-  count: number;
   fit: 'wrap' | 'scroll';
   zoom: number;
 }) {
@@ -161,6 +168,7 @@ function ColumnBody({
   const showCompleted = useStore((s) => s.preferences.showCompleted);
   const children = items[rootId]?.children ?? [];
 
+  const count = COLS;
   const cols: string[][] = Array.from({ length: count }, () => []);
   for (const id of children) {
     // Skip blocks that OutlineNode would render as nothing (hidden completed),
@@ -256,6 +264,65 @@ function ColumnBlock({
         </button>
       </div>
       <OutlineNode id={id} depth={0} visibleSet={null} numberOverride={index} />
+    </div>
+  );
+}
+
+// --------------------------------------------------------------------------
+// Left-Right layout: each block keeps its own row (so vertical position and
+// numbering are unchanged) but can be shifted to the left of the central line
+// or back to the right. Toggling sides only swaps a CSS class, so — unlike the
+// column view — editing is never interrupted.
+// --------------------------------------------------------------------------
+function LrBody({ rootId, childIds }: { rootId: string; childIds: string[] }) {
+  return (
+    <div className="lr">
+      {childIds.map((id, index) => (
+        <LrBlock key={id} id={id} index={index} />
+      ))}
+      <div
+        className="col-add lr-add"
+        onClick={() => useStore.getState().insertChild(rootId)}
+        title="Add a block"
+      >
+        + block
+      </div>
+    </div>
+  );
+}
+
+function LrBlock({ id, index }: { id: string; index: number }) {
+  const side = useStore((s) => s.items[id]?.lr ?? 'right');
+  const setSide = (to: LrSide) => useStore.getState().setItemLr(id, to);
+  return (
+    <div className={'lr-row ' + side}>
+      <div className="lr-cell">
+        <div className="lr-move">
+          <button
+            className="col-move-btn"
+            disabled={side === 'left'}
+            title="Move left of the line"
+            onMouseDown={(e) => {
+              e.preventDefault();
+              setSide('left');
+            }}
+          >
+            ◀
+          </button>
+          <button
+            className="col-move-btn"
+            disabled={side === 'right'}
+            title="Move right of the line"
+            onMouseDown={(e) => {
+              e.preventDefault();
+              setSide('right');
+            }}
+          >
+            ▶
+          </button>
+        </div>
+        <OutlineNode id={id} depth={0} visibleSet={null} numberOverride={index} />
+      </div>
     </div>
   );
 }
