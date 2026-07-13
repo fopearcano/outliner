@@ -485,51 +485,62 @@
   margin: 2px 0;
 }
 
-/* ----------------------------- Column views --------------------------- */
+/* -------------------------- 3-column L-R view ------------------------- */
 .doc-view.wide {
   max-width: 1400px;
 }
-.columns {
+.lanes {
+  --lane-w: 320px;
   margin-top: 6px;
-}
-.columns.wrap {
-  display: grid;
-  gap: 0;
-  align-items: start;
-}
-.columns.scroll {
-  display: flex;
-  gap: 0;
-  align-items: flex-start;
   overflow-x: auto;
   padding-bottom: 12px;
 }
-.column {
-  min-width: 0;
-  padding: 4px 18px;
-  border-left: 1px solid var(--guide);
-}
-.column:first-child {
-  border-left: none;
-  padding-left: 2px;
-}
-.columns.scroll .column {
-  flex: 0 0 auto;
-  width: 460px;
-}
-.col-block {
+.lanes-inner {
   position: relative;
+  width: max-content;
+  min-width: 100%;
 }
-.col-move {
+/* the two vertical column separators */
+.lane-guide {
   position: absolute;
-  top: 1px;
-  right: 0;
+  top: 0;
+  bottom: 0;
+  border-left: 1px solid var(--guide);
+  pointer-events: none;
+}
+.lane-head {
+  display: flex;
+  margin-bottom: 2px;
+}
+.lane-hcell {
+  flex: 0 0 var(--lane-w);
+  padding: 0 16px 4px;
+  font-size: 10px;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+.lane-cell {
+  position: relative;
+  width: var(--lane-w);
+  min-width: 0;
+  padding: 0 16px;
+}
+.lane-move {
+  position: absolute;
+  top: 0;
+  right: 4px;
   display: none;
   gap: 2px;
   z-index: 3;
+  background: var(--bg-elev1);
+  border-radius: 5px;
 }
-.col-block:hover > .col-move {
+.lane-row:hover .lane-move {
   display: flex;
+}
+.lane-indent {
+  min-width: 0;
 }
 .col-move-btn {
   width: 20px;
@@ -556,6 +567,13 @@
   color: var(--accent);
   border-color: var(--accent);
 }
+/* 3-column: an arrow pointing past the outermost column (still Alt-usable) */
+.col-move-btn.edge {
+  opacity: 0.3;
+}
+.col-move-btn.edge:hover {
+  opacity: 0.7;
+}
 .col-add {
   color: var(--text-muted);
   font-size: 12px;
@@ -564,8 +582,9 @@
   opacity: 0;
   transition: opacity 0.12s;
 }
-.column:hover .col-add {
-  opacity: 0.6;
+.lanes .col-add {
+  opacity: 0.5;
+  padding-left: 16px;
 }
 .col-add:hover {
   opacity: 1;

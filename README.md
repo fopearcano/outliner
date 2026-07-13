@@ -68,15 +68,15 @@ telemetry — your notes never leave the machine.
 - **Three themes** — Dark (VSCode “Dark+”), Darker (near-black), and Light
   (VSCode “Light+”) — switchable from the **View** menu
 - **Layouts** (View → Layout) beyond the normal outline:
-  - **2-column** — an independent 2nd column. Move a top-level block into it
-    with the ▶ control; column-2 blocks live only here and are hidden in the
-    other views. Choose **Fit width** (wrap) or **Scroll + zoom** (fixed-width
-    columns that scroll horizontally, with a zoom slider).
   - **L ↔ R** — shift any block (at any depth) to the left or right of a central
     line with the ◀ / ▶ controls, while it keeps its row, indent and number in
     the list (great for two-sided / timeline notes). Every block moves
     independently; hold **⌥ Alt** to move a block together with all its
     sub-items. Toggling sides never interrupts editing.
+  - **3-col L ↔ R** — the same idea across **three fixed-width columns** (left,
+    main/centre, right): move any block between them with ◀ / ▶ (⌥ Alt for its
+    whole subtree). The columns keep a comfortable fixed width and the view
+    scrolls sideways on a narrow screen instead of shrinking or wrapping text.
 - **View options** popover: show/hide completed items, show/hide notes, compact
   spacing, font size, and per-document settings
 - **Collapsible sidebar** (`Ctrl/⌘+\`) for a distraction-free full-width outline

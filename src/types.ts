@@ -29,10 +29,10 @@ export interface OutlineItem {
   color: ColorLabel | null;
   /** Optional box/border drawn around the bullet. */
   box: BoxStyle | null;
-  /** Column for the 2-column view (0 = main, 1 = the independent 2nd column). */
-  column: number;
-  /** Side of the central line in the L-R view. Default 'right' (normal). */
+  /** Side of the central line in the 2-lane L-R view. Default 'right' (normal). */
   lr: LrSide;
+  /** Lane in the 3-column L-R view. Default 'center' (the main column). */
+  lane: Lane;
   /** Image / file attachments (stored inline as data URLs). */
   attachments: Attachment[];
   createdAt: number;
@@ -117,32 +117,28 @@ export interface Doc {
   modifiedAt: number;
 }
 
-/** Layout of the document body. */
-export type ViewMode = 'outline' | 'col2' | 'lr';
-/** How columns handle text that's wider than the column. */
-export type ColumnFit = 'wrap' | 'scroll';
-/** Which side of the central line a block sits on, in the L-R view. */
+/** Layout of the document body: outline | 2-lane L-R | 3-column L-R. */
+export type ViewMode = 'outline' | 'lr' | 'lr3';
+/** Which side of the central line a block sits on, in the 2-lane L-R view. */
 export type LrSide = 'left' | 'right';
+/** Which of the three columns a block sits in, in the 3-column L-R view. */
+export type Lane = 'left' | 'center' | 'right';
+
+export const LANES: Lane[] = ['left', 'center', 'right'];
 
 export interface DocSettings {
   /** New bullets become checkboxes by default. */
   checkboxMode: boolean;
   /** Render bullets as a numbered (1. 2. 3.) list. */
   numbered: boolean;
-  /** outline (default) | 2-column | left-right. */
+  /** outline (default) | 2-lane left-right | 3-column left-right. */
   viewMode: ViewMode;
-  /** In the 2-column view: wrap text to the column, or scroll horizontally + zoom. */
-  columnFit: ColumnFit;
-  /** Zoom factor used in the column "scroll" fit (0.5–2). */
-  columnZoom: number;
 }
 
 export const DEFAULT_DOC_SETTINGS: DocSettings = {
   checkboxMode: false,
   numbered: false,
   viewMode: 'outline',
-  columnFit: 'wrap',
-  columnZoom: 1,
 };
 
 /** Available color themes. */

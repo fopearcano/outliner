@@ -11,6 +11,7 @@ import {
   type Attachment,
   type BoxStyle,
   type LrSide,
+  type Lane,
   type PersistedState,
   DEFAULT_PREFERENCES,
   DEFAULT_DOC_SETTINGS,
@@ -120,8 +121,6 @@ export interface StoreState {
   setNote: (id: string, note: string) => void;
   insertItemAfter: (id: string, before?: string, after?: string) => void;
   insertChild: (id: string) => void;
-  /** Append a new top-level block to `parentId`, placed in `column` (one undo step). */
-  addBlockInColumn: (parentId: string, column: number) => void;
   indent: (id: string) => void;
   outdent: (id: string) => void;
   moveUp: (id: string) => void;
@@ -137,9 +136,10 @@ export interface StoreState {
   setHeading: (id: string, level: number) => void;
   setColor: (id: string, color: ColorLabel | null) => void;
   setBox: (id: string, box: BoxStyle | null) => void;
-  setItemColumn: (id: string, column: number) => void;
   setItemLr: (id: string, lr: LrSide) => void;
   setSubtreeLr: (id: string, lr: LrSide) => void;
+  setItemLane: (id: string, lane: Lane) => void;
+  setSubtreeLane: (id: string, lane: Lane) => void;
   addAttachments: (id: string, attachments: Attachment[]) => void;
   removeAttachment: (id: string, attachmentId: string) => void;
   duplicateItem: (id: string) => void;
@@ -185,14 +185,16 @@ let currentHandle: FileSystemFileHandle | null = null;
 /** Backfill fields that may be missing from older / imported data. */
 function normalizeItems(items: ItemMap): ItemMap {
   for (const id in items) {
-    const it = items[id];
-    if (!it.attachments || it.box === undefined || it.column === undefined || it.lr === undefined) {
+    const it = items[id] as OutlineItem & { column?: number };
+    if (!it.attachments || it.box === undefined || it.lr === undefined || it.lane === undefined) {
       items[id] = {
         ...it,
         attachments: it.attachments ?? [],
         box: it.box ?? null,
-        column: it.column ?? 0,
         lr: it.lr ?? 'right',
+        // Migrate the old 2-column "stash" field: a stashed block (column >= 1)
+        // becomes the right lane, everything else the centre (main) lane.
+        lane: it.lane ?? ((it.column ?? 0) >= 1 ? 'right' : 'center'),
       };
     }
   }
@@ -202,8 +204,9 @@ function normalizeItems(items: ItemMap): ItemMap {
 function normalizeDocs(docs: Record<string, Doc>): Record<string, Doc> {
   for (const id in docs) {
     const settings = { ...DEFAULT_DOC_SETTINGS, ...docs[id].settings };
-    // The 3-column view was removed; fall back to 2 columns.
-    if ((settings.viewMode as string) === 'col3') settings.viewMode = 'col2';
+    // The old column views (col2 / col3) became the 3-column L-R view.
+    const vm = settings.viewMode as string;
+    if (vm === 'col2' || vm === 'col3') settings.viewMode = 'lr3';
     docs[id] = { ...docs[id], settings };
   }
   return docs;
@@ -584,9 +587,9 @@ export const useStore = create<StoreState>((set, get) => {
         const items = { ...s.items };
         const parentId = item.parent;
         const newItem = makeItem(parentId, { text: after ?? '', checkbox: item.checkbox });
-        // Inherit column + L-R side so a new sibling stays in the same lane/side.
-        newItem.column = item.column;
+        // Inherit L-R side + lane so a new sibling stays in the same place.
         newItem.lr = item.lr;
+        newItem.lane = item.lane;
         // Apply text split to the original if provided.
         if (before !== undefined) items[id] = touch({ ...item, text: before });
         // If the source is expanded with children, the new node becomes its
@@ -617,22 +620,6 @@ export const useStore = create<StoreState>((set, get) => {
           ...s.items,
           [child.id]: child,
           [id]: { ...item, children: [...item.children, child.id], collapsed: false },
-        };
-        return { items, focus: { id: child.id, pos: 'start', ts: Date.now() } };
-      });
-    },
-
-    addBlockInColumn: (parentId, column) => {
-      pushHistory();
-      set((s) => {
-        const parent = s.items[parentId];
-        if (!parent) return {};
-        const child = makeItem(parentId);
-        child.column = Math.max(0, column);
-        const items = {
-          ...s.items,
-          [child.id]: child,
-          [parentId]: { ...parent, children: [...parent.children, child.id], collapsed: false },
         };
         return { items, focus: { id: child.id, pos: 'start', ts: Date.now() } };
       });
@@ -747,8 +734,8 @@ export const useStore = create<StoreState>((set, get) => {
           const idx = kids.indexOf(targetId);
           kids.splice(position === 'before' ? idx : idx + 1, 0, dragId);
           items[parentId] = { ...items[parentId], children: kids };
-          // Dropping next to a block adopts that block's column-view lane.
-          items[dragId] = { ...items[dragId], parent: parentId, column: items[targetId].column };
+          // Dropping next to a block adopts that block's L-R lane.
+          items[dragId] = { ...items[dragId], parent: parentId, lane: items[targetId].lane };
         }
         return { items };
       });
@@ -911,12 +898,34 @@ export const useStore = create<StoreState>((set, get) => {
       });
     },
 
-    setItemColumn: (id, column) => {
+    setItemLane: (id, lane) => {
       pushHistory();
       set((s) => {
         const item = s.items[id];
-        if (!item) return {};
-        return { items: { ...s.items, [id]: touch({ ...item, column: Math.max(0, column) }) } };
+        if (!item || item.lane === lane) return {};
+        return { items: { ...s.items, [id]: touch({ ...item, lane }) } };
+      });
+    },
+
+    // Move a block AND its whole subtree into one column of the 3-column view.
+    setSubtreeLane: (id, lane) => {
+      const s0 = get();
+      if (!s0.items[id]) return;
+      const ids: string[] = [];
+      const stack = [id];
+      while (stack.length) {
+        const cur = stack.pop() as string;
+        const it = s0.items[cur];
+        if (!it) continue;
+        ids.push(cur);
+        for (const c of it.children) stack.push(c);
+      }
+      if (ids.every((i) => s0.items[i].lane === lane)) return; // already aligned — no-op
+      pushHistory();
+      set((s) => {
+        const items = { ...s.items };
+        for (const i of ids) if (items[i]) items[i] = touch({ ...items[i], lane });
+        return { items };
       });
     },
 
@@ -1143,24 +1152,8 @@ export const useStore = create<StoreState>((set, get) => {
       }
       const doc = Object.values(s.docs).find((d) => d.rootItemId === rootItemId);
 
-      // The item's top-level ancestor lives in the independent 2nd column iff
-      // it's hidden in the outline / L-R views. In that case switch the doc to
-      // the 2-column view so the revealed item is actually visible + focusable.
-      let top = itemId;
-      const g2 = new Set<string>();
-      while (items[top]?.parent && items[top].parent !== rootItemId && !g2.has(top)) {
-        g2.add(top);
-        top = items[top].parent as string;
-      }
-      const stashed = !!(items[top] && (items[top].column ?? 0) >= 1);
-      let docs = s.docs;
-      if (doc && stashed && doc.settings.viewMode !== 'col2') {
-        docs = { ...s.docs, [doc.id]: { ...doc, settings: { ...doc.settings, viewMode: 'col2' } } };
-      }
-
       set({
         items,
-        docs,
         currentDocId: doc ? doc.id : s.currentDocId,
         zoomItemId: null,
         filterQuery: '',

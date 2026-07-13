@@ -1,15 +1,15 @@
 // ---------------------------------------------------------------------------
 // The main pane: breadcrumb + (optional) zoom title + filter bar + outline.
 // ---------------------------------------------------------------------------
-import React, { useMemo, useRef } from 'react';
+import React, { useMemo } from 'react';
 import { useStore, currentRootItemId } from '../store/store';
 import OutlineNode from './OutlineNode';
 import { ancestorIds } from '../lib/tree';
-import { getCaretOffset } from '../lib/caret';
 import { parseQuery, matchItem } from '../lib/search';
 import { plainText, renderInline } from '../lib/markdown';
 import { useUi } from './ui-context';
 import ViewOptions from './ViewOptions';
+import { LANES } from '../types';
 import type { LrSide } from '../types';
 
 export default function DocumentView() {
@@ -70,24 +70,19 @@ export default function DocumentView() {
   // Special layouts apply only at the document root (not zoomed / not filtering).
   const atRoot = !zoomItem;
   const vm = doc.settings.viewMode;
-  const showColumns = vm === 'col2' && atRoot && !query;
   const showLr = vm === 'lr' && atRoot && !query;
-  const wide = showColumns || showLr;
+  const showLr3 = vm === 'lr3' && atRoot && !query;
+  const wide = showLr || showLr3;
 
-  // Which top-level children the plain outline / L-R views show. The independent
-  // 2nd column (column >= 1) is only visible in the 2-column view — hidden here.
   const outlineChildren = query
     ? rootChildren.filter((c) => visibleSet?.has(c))
-    : atRoot
-      ? rootChildren.filter((c) => (items[c]?.column ?? 0) === 0)
-      : rootChildren;
+    : rootChildren;
 
-  // L-R view: flatten the visible tree so EVERY block (at any depth) is its own
-  // row that can be shifted left/right of the centre line independently, while
-  // keeping its vertical position, indent depth and sibling number. (A parent no
-  // longer drags its children across — each block carries its own `lr` side.)
+  // Both L-R views (2-lane and 3-column) flatten the visible tree so EVERY block
+  // (at any depth) is its own row that can be shifted between lanes independently,
+  // keeping its vertical position, indent depth and sibling number.
   const lrRows: { id: string; depth: number; number: number }[] = [];
-  if (showLr) {
+  if (showLr || showLr3) {
     const walk = (ids: string[], depth: number) => {
       let n = 0;
       for (const cid of ids) {
@@ -127,10 +122,10 @@ export default function DocumentView() {
         <DocTitle docId={doc.id} title={doc.title} />
       )}
 
-      {showColumns && rootId ? (
-        <ColumnBody rootId={rootId} fit={doc.settings.columnFit} zoom={doc.settings.columnZoom} />
-      ) : showLr && rootId ? (
+      {showLr && rootId ? (
         <LrBody rootId={rootId} rows={lrRows} />
+      ) : showLr3 && rootId ? (
+        <LaneBody rootId={rootId} rows={lrRows} />
       ) : (
         <>
           <div className="outline">
@@ -152,8 +147,6 @@ export default function DocumentView() {
                   id={cid}
                   depth={0}
                   visibleSet={visibleSet}
-                  // Number contiguously at the doc root so hiding the 2nd-column
-                  // stash doesn't leave gaps (e.g. 1, 3). Zoom/filter keep native.
                   numberOverride={atRoot && !query ? i : undefined}
                 />
               ))}
@@ -179,120 +172,75 @@ export default function DocumentView() {
 }
 
 // --------------------------------------------------------------------------
-// 2-column layout: the main column (0) plus an independent 2nd column (1).
-// Blocks in column 1 only exist here — they're hidden in the other views.
+// 3-column L-R layout: like the L-R view but with THREE fixed-width columns —
+// left, centre (main) and right. Every block is its own row and shifts between
+// columns with ◀ / ▶ (Alt/⌥ moves its whole subtree), keeping its vertical
+// position, indent and number. Columns are a fixed width and the view scrolls
+// horizontally on small screens instead of wrapping/shrinking. The block's cell
+// is offset with margin (never re-parented), so editing is never interrupted.
 // --------------------------------------------------------------------------
-const COLS = 2;
-function ColumnBody({
-  rootId,
-  fit,
-  zoom,
-}: {
-  rootId: string;
-  fit: 'wrap' | 'scroll';
-  zoom: number;
-}) {
-  const items = useStore((s) => s.items);
-  const fontSize = useStore((s) => s.preferences.fontSize);
-  const showCompleted = useStore((s) => s.preferences.showCompleted);
-  const children = items[rootId]?.children ?? [];
-
-  const count = COLS;
-  const cols: string[][] = Array.from({ length: count }, () => []);
-  for (const id of children) {
-    // Skip blocks that OutlineNode would render as nothing (hidden completed),
-    // so we don't leave empty wrappers with dangling move controls.
-    if (!showCompleted && items[id]?.completed) continue;
-    const c = Math.min(count - 1, Math.max(0, items[id]?.column ?? 0));
-    cols[c].push(id);
-  }
-
-  const style: React.CSSProperties =
-    fit === 'scroll'
-      ? ({ ['--font-size' as string]: `${fontSize * zoom}px` } as React.CSSProperties)
-      : { gridTemplateColumns: `repeat(${count}, minmax(0, 1fr))` };
-
+function LaneBody({ rootId, rows }: { rootId: string; rows: { id: string; depth: number; number: number }[] }) {
   return (
-    <div className={'columns ' + fit} style={style}>
-      {cols.map((ids, i) => (
-        <div className="column" key={i}>
-          {ids.map((id, n) => (
-            <ColumnBlock key={id} id={id} col={i} count={count} index={n} />
-          ))}
-          <div
-            className="col-add"
-            onClick={() => useStore.getState().addBlockInColumn(rootId, i)}
-            title="Add a block to this column"
-          >
-            + block
-          </div>
+    <div className="lanes">
+      <div className="lanes-inner">
+        <div className="lane-guide" style={{ left: 'var(--lane-w)' }} />
+        <div className="lane-guide" style={{ left: 'calc(var(--lane-w) * 2)' }} />
+        <div className="lane-head">
+          <div className="lane-hcell">Left</div>
+          <div className="lane-hcell">Main</div>
+          <div className="lane-hcell">Right</div>
         </div>
-      ))}
+        {rows.map((r) => (
+          <LaneBlock key={r.id} id={r.id} depth={r.depth} number={r.number} />
+        ))}
+        <div
+          className="col-add lane-add"
+          onClick={() => useStore.getState().insertChild(rootId)}
+          title="Add a block"
+        >
+          + block
+        </div>
+      </div>
     </div>
   );
 }
 
-function ColumnBlock({
-  id,
-  col,
-  count,
-  index,
-}: {
-  id: string;
-  col: number;
-  count: number;
-  index: number;
-}) {
-  const ref = useRef<HTMLDivElement>(null);
-
-  // Moving a block to another column re-parents it in the DOM, so React
-  // remounts its subtree. If the block (or one of its children) is being
-  // edited, capture the caret first and re-issue a focus request afterward so
-  // the remounted editor re-opens at the same spot — no lost typing.
-  const move = (dir: -1 | 1) => {
-    const active = document.activeElement as HTMLElement | null;
-    let focusId: string | null = null;
-    let caret: number | 'end' = 'end';
-    if (
-      active &&
-      ref.current?.contains(active) &&
-      active.isContentEditable &&
-      active.classList.contains('node-text')
-    ) {
-      focusId = (active.closest('.node') as HTMLElement | null)?.dataset.id ?? null;
-      caret = getCaretOffset(active);
-    }
-    useStore.getState().setItemColumn(id, col + dir);
-    if (focusId) useStore.getState().requestFocus(focusId, caret);
+function LaneBlock({ id, depth, number }: { id: string; depth: number; number: number }) {
+  const lane = useStore((s) => s.items[id]?.lane ?? 'center');
+  const hasKids = useStore((s) => (s.items[id]?.children.length ?? 0) > 0);
+  const idx = LANES.indexOf(lane);
+  // Plain click steps one column; Alt/⌥ moves the whole subtree to that column.
+  const step = (dir: -1 | 1, e: React.MouseEvent) => {
+    e.preventDefault();
+    const target = LANES[Math.min(2, Math.max(0, idx + dir))];
+    const st = useStore.getState();
+    if (e.altKey) st.setSubtreeLane(id, target);
+    else st.setItemLane(id, target);
   };
-
+  const tip = (dir: string) => `Move to the ${dir} column` + (hasKids ? ' · ⌥ with sub-items' : '');
   return (
-    <div className="col-block" ref={ref}>
-      <div className="col-move">
-        <button
-          className="col-move-btn"
-          disabled={col === 0}
-          title="Move left"
-          onMouseDown={(e) => {
-            e.preventDefault();
-            move(-1);
-          }}
-        >
-          ◀
-        </button>
-        <button
-          className="col-move-btn"
-          disabled={col === count - 1}
-          title="Move right"
-          onMouseDown={(e) => {
-            e.preventDefault();
-            move(1);
-          }}
-        >
-          ▶
-        </button>
+    <div className="lane-row">
+      <div className="lane-cell" style={{ marginLeft: `calc(var(--lane-w) * ${idx})` }}>
+        <div className="lane-move">
+          <button
+            className={'col-move-btn' + (idx === 0 ? ' edge' : '')}
+            title={tip('left')}
+            onMouseDown={(e) => step(-1, e)}
+          >
+            ◀
+          </button>
+          <button
+            className={'col-move-btn' + (idx === 2 ? ' edge' : '')}
+            title={tip('right')}
+            onMouseDown={(e) => step(1, e)}
+          >
+            ▶
+          </button>
+        </div>
+        <div className="lane-indent" style={depth ? { paddingLeft: depth * 20 } : undefined}>
+          <OutlineNode id={id} depth={0} visibleSet={null} numberOverride={number} flat />
+        </div>
       </div>
-      <OutlineNode id={id} depth={0} visibleSet={null} numberOverride={index} />
     </div>
   );
 }

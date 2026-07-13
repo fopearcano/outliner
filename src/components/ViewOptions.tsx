@@ -96,8 +96,8 @@ export default function ViewOptions() {
                 {(
                   [
                     ['outline', 'Outline'],
-                    ['col2', '2 col'],
                     ['lr', 'L ↔ R'],
+                    ['lr3', '3-col L↔R'],
                   ] as const
                 ).map(([mode, label]) => (
                   <button
@@ -117,41 +117,13 @@ export default function ViewOptions() {
                   sub-items.
                 </p>
               )}
-              {doc.settings.viewMode === 'col2' && (
-                <>
-                  <div className="seg" style={{ marginTop: 6 }}>
-                    {(
-                      [
-                        ['wrap', 'Fit width'],
-                        ['scroll', 'Scroll + zoom'],
-                      ] as const
-                    ).map(([fit, label]) => (
-                      <button
-                        key={fit}
-                        className={'seg-btn' + (doc.settings.columnFit === fit ? ' on' : '')}
-                        onClick={() => useStore.getState().setDocSettings(doc.id, { columnFit: fit })}
-                      >
-                        {label}
-                      </button>
-                    ))}
-                  </div>
-                  {doc.settings.columnFit === 'scroll' && (
-                    <div className="view-row static">
-                      <span>Zoom</span>
-                      <input
-                        type="range"
-                        min={0.5}
-                        max={2}
-                        step={0.1}
-                        value={doc.settings.columnZoom}
-                        onChange={(e) =>
-                          useStore.getState().setDocSettings(doc.id, { columnZoom: Number(e.target.value) })
-                        }
-                      />
-                      <span className="view-val">{doc.settings.columnZoom.toFixed(1)}×</span>
-                    </div>
-                  )}
-                </>
+              {doc.settings.viewMode === 'lr3' && (
+                <p className="muted" style={{ margin: '8px 6px 0' }}>
+                  Three fixed-width columns — left, main (centre) and right. Move any
+                  block ◀ / ▶ between them independently, keeping its row and number.
+                  Hold <b>⌥ Alt</b> to move a block with its sub-items. Columns don't
+                  shrink — the view scrolls sideways on a narrow screen.
+                </p>
               )}
 
               <div className="view-sep" />
