@@ -96,7 +96,14 @@ export default function App() {
       },
       onInternalLink: (name) => {
         const item = findItemByTitle(useStore.getState().items, name);
-        if (item) useStore.getState().revealItem(item.id);
+        if (item) {
+          useStore.getState().revealItem(item.id);
+        } else {
+          // No bullet has exactly this text — don't silently do nothing; open
+          // search seeded with it so the user can find / create the target.
+          setSearchSeed(name);
+          setModal('search');
+        }
       },
       openDatePicker: (itemId, token) => setDatePicker({ itemId, token }),
       openContextMenu: (itemId, x, y) => setCtxMenu({ itemId, x, y }),

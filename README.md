@@ -30,7 +30,10 @@ telemetry — your notes never leave the machine.
 `.word` (fuchsia) · standalone `-` / `*` markers (carmine)
 
 - **#tags** and **@mentions** are clickable and collected into a tag pane
-- **[[internal links]]** jump between bullets, with automatic **backlinks**
+- **[[internal links]]** jump to another bullet **by its exact text** — click one
+  and it scrolls to & flashes the target (which can be in any document); if no
+  bullet matches exactly, it opens search seeded with that text. Every target
+  also gets automatic **backlinks**
 - **!(date)** tokens render as friendly labels (“Today”, “Tomorrow”, “Fri”),
   flag overdue items, and support **recurrence** (daily / weekly / monthly / yearly)
 - **Per-word formatting** — select any word(s) inside a bullet and a floating

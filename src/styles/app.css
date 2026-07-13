@@ -393,6 +393,22 @@
 .node-row:hover {
   background: rgba(255, 255, 255, 0.02);
 }
+/* Brief highlight when a row is reached via a link / search / backlink jump. */
+@keyframes reveal-flash {
+  0%,
+  35% {
+    background: rgba(86, 156, 214, 0.32);
+    box-shadow: 0 0 0 3px rgba(86, 156, 214, 0.32);
+  }
+  100% {
+    background: transparent;
+    box-shadow: 0 0 0 3px transparent;
+  }
+}
+.node-row.revealed {
+  animation: reveal-flash 1.3s ease-out;
+  border-radius: 5px;
+}
 .node-gutter {
   display: flex;
   align-items: center;

@@ -52,6 +52,8 @@ export default function OutlineNode({ id, depth, visibleSet, numberOverride, fla
   const [editing, setEditing] = useState(false);
   const [noteEditing, setNoteEditing] = useState(false);
   const [fileOver, setFileOver] = useState(false);
+  const [flash, setFlash] = useState(false);
+  const nodeRef = useRef<HTMLDivElement>(null);
 
   const attach = async (files: FileList | File[]) => {
     const { attachments, errors } = await readFiles(files);
@@ -96,6 +98,18 @@ export default function OutlineNode({ id, depth, visibleSet, numberOverride, fla
       if (editing) applyCaret();
       else setEditing(true);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [myFocus]);
+
+  // A navigation "reveal" (following an [[internal link]], search hit or
+  // backlink) scrolls the target row into view and briefly flashes it, so the
+  // jump is obvious even when the target was already on screen.
+  useLayoutEffect(() => {
+    if (!myFocus?.reveal) return;
+    nodeRef.current?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    setFlash(true);
+    const t = setTimeout(() => setFlash(false), 1300);
+    return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [myFocus]);
 
@@ -401,10 +415,13 @@ export default function OutlineNode({ id, depth, visibleSet, numberOverride, fla
   if (prefs.showCompleted === false && item.completed && !visibleSet) return null;
 
   return (
-    <div className="node" data-id={id}>
+    <div className="node" data-id={id} ref={nodeRef}>
       <div
         className={
-          'node-row' + (dropPos ? ` drop-${dropPos}` : '') + (fileOver ? ' file-over' : '')
+          'node-row' +
+          (dropPos ? ` drop-${dropPos}` : '') +
+          (fileOver ? ' file-over' : '') +
+          (flash ? ' revealed' : '')
         }
         onDragOver={onDragOver}
         onDragLeave={onDragLeave}

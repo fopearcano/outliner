@@ -102,6 +102,7 @@ function renderToken(
         <span
           key={key}
           className="md-ilink"
+          title={`Jump to the bullet “${inner.trim()}”`}
           onMouseDown={(e) => {
             e.preventDefault();
             e.stopPropagation();

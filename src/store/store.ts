@@ -49,6 +49,8 @@ export interface FocusRequest {
   pos: CaretPos | number;
   /** target the note field instead of the main text */
   note?: boolean;
+  /** a navigation jump (link / search / backlink) — scroll to & flash the row */
+  reveal?: boolean;
   ts: number;
 }
 
@@ -1162,7 +1164,7 @@ export const useStore = create<StoreState>((set, get) => {
         currentDocId: doc ? doc.id : s.currentDocId,
         zoomItemId: null,
         filterQuery: '',
-        focus: { id: itemId, pos: 'end', ts: Date.now() },
+        focus: { id: itemId, pos: 'end', ts: Date.now(), reveal: true },
       });
     },
 
@@ -1263,7 +1265,7 @@ function createSeed(): Partial<StoreState> {
   add(md, 'Link to anything: [Dynalist](https://dynalist.io)');
   add(md, 'Tag things with #project and @people — they are color-coded');
   add(md, 'Schedule with dates like !(2026-07-10) — click to open the picker');
-  add(md, 'Link between bullets with [[Ship it]] — click it to jump there');
+  add(md, 'Link to another bullet by its exact text — [[Ship it]] jumps to the “Ship it” task below (no match opens search)');
 
   const todo = add(root.id, 'A checklist (press **Ctrl+Enter** to complete):', { collapsed: false });
   add(todo, 'Design the outliner', { checkbox: true, completed: true });
