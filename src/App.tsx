@@ -3,6 +3,8 @@ import { useStore } from './store/store';
 import { readFiles } from './lib/attachments';
 import Sidebar from './components/Sidebar';
 import DocumentView from './components/DocumentView';
+import NavPanel from './components/NavPanel';
+import MindmapPanel from './components/MindmapPanel';
 import CommandPalette from './components/CommandPalette';
 import SearchPanel from './components/SearchPanel';
 import ShortcutHelp from './components/ShortcutHelp';
@@ -182,6 +184,7 @@ export default function App() {
   const appClass =
     'app' +
     (prefs.sidebarVisible ? '' : ' sidebar-hidden') +
+    (prefs.navVisible ? ' nav-open' : '') +
     (prefs.compact ? ' compact' : '') +
     (prefs.showNotes ? '' : ' hide-notes');
 
@@ -202,7 +205,9 @@ export default function App() {
           <ReconnectBanner />
           <DocumentView />
         </main>
+        {prefs.navVisible && <NavPanel />}
 
+        {prefs.mindmapOpen && <MindmapPanel />}
         <FormatToolbar />
 
         <input

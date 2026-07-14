@@ -77,6 +77,12 @@ telemetry — your notes never leave the machine.
     main/centre, right): move any block between them with ◀ / ▶ (⌥ Alt for its
     whole subtree). The columns keep a comfortable fixed width and the view
     scrolls sideways on a narrow screen instead of shrinking or wrapping text.
+- **Navigation panel** (View → *Navigation panel*) — a collapsible right‑hand map
+  of the whole document; click any row to scroll to & flash that bullet.
+- **Mindmap** (View → *Mindmap from outline*) — a floating, movable panel that
+  draws your outline as a left‑to‑right mindmap and updates live as you edit.
+  Drag its title bar to move it, drag the corner to resize, pan by dragging the
+  canvas, zoom with the scroll wheel, and click a node to jump to that bullet.
 - **View options** popover: show/hide completed items, show/hide notes, compact
   spacing, font size, and per-document settings
 - **Collapsible sidebar** (`Ctrl/⌘+\`) for a distraction-free full-width outline

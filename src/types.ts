@@ -168,6 +168,10 @@ export interface Preferences {
   compact: boolean;
   /** Whether the left sidebar is visible. */
   sidebarVisible: boolean;
+  /** Whether the right-hand navigation (outline map) panel is open. */
+  navVisible: boolean;
+  /** Whether the floating mindmap panel is open. */
+  mindmapOpen: boolean;
   /** Spellcheck inside the editor. */
   spellcheck: boolean;
 }
@@ -181,6 +185,8 @@ export const DEFAULT_PREFERENCES: Preferences = {
   showNotes: true,
   compact: false,
   sidebarVisible: true,
+  navVisible: false,
+  mindmapOpen: false,
   spellcheck: false,
 };
 

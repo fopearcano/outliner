@@ -76,6 +76,19 @@ export default function ViewOptions() {
           <Toggle label="Show sidebar" checked={prefs.sidebarVisible} onChange={(v) => set({ sidebarVisible: v })} />
 
           <div className="view-sep" />
+          <Toggle label="Navigation panel" checked={prefs.navVisible} onChange={(v) => set({ navVisible: v })} />
+          <button
+            className="view-row"
+            onClick={() => {
+              set({ mindmapOpen: true });
+              setOpen(false);
+            }}
+          >
+            <span>🧠 Mindmap from outline</span>
+            <span className="view-cta">open</span>
+          </button>
+
+          <div className="view-sep" />
           <div className="view-row static">
             <span>Font size</span>
             <input
