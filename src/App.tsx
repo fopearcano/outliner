@@ -37,6 +37,30 @@ function ReconnectBanner() {
   );
 }
 
+/** Shown when the connected file changed on another device while we had edits. */
+function ConflictBanner() {
+  const status = useStore((s) => s.syncStatus);
+  const fileName = useStore((s) => s.fileName);
+  if (status !== 'conflict') return null;
+  return (
+    <div className="conflict-banner">
+      <span>
+        ⚠ <strong>{fileName || 'This file'}</strong> was changed on another device while you also
+        had unsaved edits here. Choose which version to keep — the other one is downloaded as a
+        backup first, so nothing is lost.
+      </span>
+      <div className="conflict-actions">
+        <button className="btn" onClick={() => void useStore.getState().resolveConflict('theirs')}>
+          Use other device
+        </button>
+        <button className="btn primary" onClick={() => void useStore.getState().resolveConflict('mine')}>
+          Keep this device
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export default function App() {
   const loaded = useStore((s) => s.loaded);
   const prefs = useStore((s) => s.preferences);
@@ -167,6 +191,23 @@ export default function App() {
     return () => window.removeEventListener('keydown', onKeyDown);
   }, [onKeyDown]);
 
+  // Multi-device sync: when the tab regains focus / becomes visible (and on a
+  // light interval), re-read the connected file so another device's changes
+  // (synced in via Dropbox/iCloud/Drive) are pulled in — or a conflict flagged.
+  useEffect(() => {
+    const check = () => {
+      if (!document.hidden) void useStore.getState().checkFileSync();
+    };
+    window.addEventListener('focus', check);
+    document.addEventListener('visibilitychange', check);
+    const id = window.setInterval(check, 20000);
+    return () => {
+      window.removeEventListener('focus', check);
+      document.removeEventListener('visibilitychange', check);
+      clearInterval(id);
+    };
+  }, []);
+
   if (!loaded) {
     return (
       <div className="boot">
@@ -203,6 +244,7 @@ export default function App() {
         )}
         <main className="main">
           <ReconnectBanner />
+          <ConflictBanner />
           <DocumentView />
         </main>
         {prefs.navVisible && <NavPanel />}

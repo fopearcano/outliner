@@ -107,6 +107,37 @@ export async function readFileState(handle: FileSystemFileHandle): Promise<Persi
   }
 }
 
+/**
+ * A cheap "did the file change" signature: modified-time + byte size. Used to
+ * detect an external write (e.g. another device's copy synced in by Dropbox)
+ * without reading/parsing the whole file. Compared with strict inequality, so a
+ * clock that runs backwards on another device is still caught (size differs, or
+ * the mtime simply isn't equal to what we last recorded).
+ */
+export async function fileSig(handle: FileSystemFileHandle): Promise<string> {
+  try {
+    const f = await handle.getFile();
+    return `${f.lastModified}:${f.size}`;
+  } catch {
+    return '';
+  }
+}
+
+export async function readFileStateWithSig(
+  handle: FileSystemFileHandle,
+): Promise<{ state: PersistedState | null; sig: string }> {
+  try {
+    const file = await handle.getFile();
+    const sig = `${file.lastModified}:${file.size}`;
+    const text = await file.text();
+    const state = text.trim() ? (JSON.parse(text) as PersistedState) : null;
+    return { state, sig };
+  } catch (err) {
+    console.error('Could not read data file', err);
+    return { state: null, sig: '' };
+  }
+}
+
 // Serialize writes so overlapping saves never interleave / truncate each other.
 let writeChain: Promise<void> = Promise.resolve();
 export function writeFileState(handle: FileSystemFileHandle, state: PersistedState): Promise<void> {

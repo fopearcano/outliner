@@ -123,6 +123,13 @@ or just keep running it locally.
   and remembers across reloads. Your notes then live in a folder you own and
   **survive clearing browser data entirely.** (Chrome/Edge desktop; other
   browsers fall back to IndexedDB.)
+- **Sync across devices (no account, no server):** point that data file at a
+  folder your **Dropbox / iCloud / Google Drive / OneDrive** app already syncs
+  (*Settings → Sync across devices → Set up sync…*). The app **pulls the latest**
+  whenever you return to the tab, shows a small **☁ Synced** status, and if two
+  devices edited at once it **won't silently overwrite** — it downloads a backup
+  of the other version and asks which to keep. (File‑level sync, not live
+  co‑editing; Chrome/Edge desktop.)
 - Use **Import / Export → Download backup** for a portable JSON snapshot anytime,
   or **Settings → Erase all data** to start fresh.
 

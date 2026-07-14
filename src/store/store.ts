@@ -39,11 +39,15 @@ import {
   clearHandle,
   queryPermission,
   requestPermission,
-  readFileState,
   writeFileState,
+  fileSig,
+  readFileStateWithSig,
 } from '../lib/fileStore';
 
 export type CaretPos = 'start' | 'end';
+
+/** Sync state of the connected data file (for the status chip + conflict UI). */
+export type SyncStatus = 'off' | 'synced' | 'saving' | 'loading' | 'conflict' | 'error';
 
 export interface FocusRequest {
   id: string;
@@ -88,6 +92,10 @@ export interface StoreState {
   fileName: string | null;
   fileConnected: boolean;
   fileNeedsReconnect: boolean;
+  /** Live sync state of the connected file (for the status chip). */
+  syncStatus: SyncStatus;
+  /** The other device's version, when an edit conflict is detected. */
+  fileConflict: PersistedState | null;
 
   // --- lifecycle ---
   hydrate: () => Promise<void>;
@@ -101,6 +109,10 @@ export interface StoreState {
   reconnectFile: () => Promise<boolean>;
   /** Stop syncing to the file (data stays in the browser). */
   disconnectFile: () => void;
+  /** Re-read the connected file; pull external changes or flag a conflict. */
+  checkFileSync: () => Promise<void>;
+  /** Resolve a detected conflict by keeping this device or the other one. */
+  resolveConflict: (choice: 'mine' | 'theirs') => Promise<void>;
 
   // --- focus ---
   requestFocus: (id: string, pos?: CaretPos | number, note?: boolean) => void;
@@ -181,6 +193,29 @@ let lastEditTs = 0;
 // The connected data file, if any (File System Access). Kept outside React
 // state because a handle is not something the UI renders directly.
 let currentHandle: FileSystemFileHandle | null = null;
+// Sync bookkeeping for the connected file:
+//  syncedSig      – the file's signature (mtime:size) as of our last read/write.
+//  dirty          – we have local edits the file doesn't have yet.
+//  loadingFromFile– the next store change comes from loading the file, so it
+//                   must NOT be written back (avoids a no-op write ping-pong).
+let syncedSig = '';
+let dirty = false;
+let loadingFromFile = false;
+
+/** Download a snapshot as a JSON file (used to back up the losing side of a conflict). */
+function downloadState(state: PersistedState, tag: string): void {
+  try {
+    const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `outliner-conflict-${tag}-${Date.now()}.json`;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 2000);
+  } catch (err) {
+    console.error('Could not download conflict backup', err);
+  }
+}
 
 /** Backfill fields that may be missing from older / imported data. */
 function normalizeItems(items: ItemMap): ItemMap {
@@ -248,6 +283,7 @@ export const useStore = create<StoreState>((set, get) => {
 
   /** Replace the whole document graph from a persisted snapshot (file load). */
   const applyPersisted = (p: PersistedState) => {
+    loadingFromFile = true; // this change came from the file; don't write it back
     set({
       items: normalizeItems({ ...p.items }),
       docs: normalizeDocs({ ...p.docs }),
@@ -286,6 +322,8 @@ export const useStore = create<StoreState>((set, get) => {
     fileName: null,
     fileConnected: false,
     fileNeedsReconnect: false,
+    syncStatus: 'off',
+    fileConflict: null,
 
     hydrate: async () => {
       const persisted = await loadState();
@@ -313,12 +351,14 @@ export const useStore = create<StoreState>((set, get) => {
       currentHandle = handle;
       const perm = await queryPermission(handle);
       if (perm === 'granted') {
-        const state = await readFileState(handle);
+        const { state, sig } = await readFileStateWithSig(handle);
         if (state && state.rootDocIds?.length) applyPersisted(state);
-        set({ fileName: handle.name, fileConnected: true, fileNeedsReconnect: false });
+        syncedSig = sig;
+        dirty = false;
+        set({ fileName: handle.name, fileConnected: true, fileNeedsReconnect: false, syncStatus: 'synced' });
       } else {
         // Needs a click to re-grant read/write after a reload.
-        set({ fileName: handle.name, fileConnected: false, fileNeedsReconnect: true });
+        set({ fileName: handle.name, fileConnected: false, fileNeedsReconnect: true, syncStatus: 'off' });
       }
     },
 
@@ -329,7 +369,9 @@ export const useStore = create<StoreState>((set, get) => {
       currentHandle = handle;
       await writeFileState(handle, currentPersisted(get()));
       await saveHandle(handle);
-      set({ fileName: handle.name, fileConnected: true, fileNeedsReconnect: false });
+      syncedSig = await fileSig(handle);
+      dirty = false;
+      set({ fileName: handle.name, fileConnected: true, fileNeedsReconnect: false, syncStatus: 'synced' });
       return true;
     },
 
@@ -338,11 +380,13 @@ export const useStore = create<StoreState>((set, get) => {
       const handle = await pickOpenFile();
       if (!handle) return false;
       if (!(await requestPermission(handle))) return false;
-      const state = await readFileState(handle);
+      const { state, sig } = await readFileStateWithSig(handle);
       currentHandle = handle;
       await saveHandle(handle);
       if (state && state.rootDocIds?.length) applyPersisted(state);
-      set({ fileName: handle.name, fileConnected: true, fileNeedsReconnect: false });
+      syncedSig = sig;
+      dirty = false;
+      set({ fileName: handle.name, fileConnected: true, fileNeedsReconnect: false, syncStatus: 'synced' });
       return true;
     },
 
@@ -350,16 +394,63 @@ export const useStore = create<StoreState>((set, get) => {
       if (!currentHandle) currentHandle = await loadHandle();
       if (!currentHandle) return false;
       if (!(await requestPermission(currentHandle))) return false;
-      const state = await readFileState(currentHandle);
+      const { state, sig } = await readFileStateWithSig(currentHandle);
       if (state && state.rootDocIds?.length) applyPersisted(state);
-      set({ fileName: currentHandle.name, fileConnected: true, fileNeedsReconnect: false });
+      syncedSig = sig;
+      dirty = false;
+      set({ fileName: currentHandle.name, fileConnected: true, fileNeedsReconnect: false, syncStatus: 'synced' });
       return true;
     },
 
     disconnectFile: () => {
       currentHandle = null;
+      syncedSig = '';
+      dirty = false;
       void clearHandle();
-      set({ fileConnected: false, fileName: null, fileNeedsReconnect: false });
+      set({ fileConnected: false, fileName: null, fileNeedsReconnect: false, syncStatus: 'off', fileConflict: null });
+    },
+
+    // Re-read the connected file. If it changed externally (another device's
+    // copy synced in) and we have no local edits, load it. If we DO have local
+    // edits, flag a conflict instead of clobbering either side.
+    checkFileSync: async () => {
+      if (!currentHandle) return;
+      const st = get();
+      if (st.syncStatus === 'conflict' || st.syncStatus === 'loading' || st.syncStatus === 'saving') return;
+      const sig = await fileSig(currentHandle);
+      if (!sig || sig === syncedSig) return; // nothing new on disk
+      set({ syncStatus: 'loading' });
+      const { state: theirs, sig: sig2 } = await readFileStateWithSig(currentHandle);
+      if (!theirs || !theirs.rootDocIds?.length) {
+        set({ syncStatus: 'synced' });
+        return;
+      }
+      if (dirty) {
+        set({ syncStatus: 'conflict', fileConflict: theirs });
+      } else {
+        applyPersisted(theirs);
+        syncedSig = sig2;
+        dirty = false;
+        set({ syncStatus: 'synced' });
+      }
+    },
+
+    resolveConflict: async (choice) => {
+      if (!currentHandle) return;
+      const st = get();
+      const theirs = st.fileConflict;
+      const mine = currentPersisted(st);
+      if (choice === 'theirs') {
+        downloadState(mine, 'this-device'); // back up our version first
+        if (theirs) applyPersisted(theirs);
+        syncedSig = await fileSig(currentHandle);
+      } else {
+        if (theirs) downloadState(theirs, 'other-device'); // back up their version first
+        await writeFileState(currentHandle, mine);
+        syncedSig = await fileSig(currentHandle);
+      }
+      dirty = false;
+      set({ syncStatus: 'synced', fileConflict: null });
     },
 
     requestFocus: (id, pos = 'end', note = false) =>
@@ -1291,12 +1382,42 @@ function createSeed(): Partial<StoreState> {
 // too (the durable, portable copy).
 // --------------------------------------------------------------------------
 const persist = debounce((state: PersistedState) => void saveState(state), 400);
-const persistFile = debounce((state: PersistedState) => {
-  if (currentHandle) void writeFileState(currentHandle, state);
+const persistFile = debounce(async (state: PersistedState) => {
+  if (!currentHandle) return;
+  if (useStore.getState().syncStatus === 'conflict') return; // paused until resolved
+  try {
+    useStore.setState({ syncStatus: 'saving' });
+    // Guard: if the file changed since our last sync, another device wrote it —
+    // don't blindly overwrite. Surface a conflict instead.
+    const sig = await fileSig(currentHandle);
+    if (syncedSig && sig && sig !== syncedSig) {
+      const { state: theirs } = await readFileStateWithSig(currentHandle);
+      useStore.setState({ syncStatus: 'conflict', fileConflict: theirs ?? null });
+      return;
+    }
+    await writeFileState(currentHandle, state);
+    syncedSig = await fileSig(currentHandle);
+    dirty = false;
+    useStore.setState({ syncStatus: 'synced' });
+  } catch {
+    useStore.setState({ syncStatus: 'error' });
+  }
 }, 900);
 
+// Track the previous persisted slice so status-only changes (syncStatus,
+// fileConflict, focus, …) don't re-trigger a save — otherwise setState inside
+// persistFile would loop.
+let prevItems: unknown, prevDocs: unknown, prevRoots: unknown, prevCur: unknown, prevPrefs: unknown;
 useStore.subscribe((s) => {
   if (!s.loaded) return;
+  if (s.items === prevItems && s.docs === prevDocs && s.rootDocIds === prevRoots && s.currentDocId === prevCur && s.preferences === prevPrefs) {
+    return; // nothing in the persisted slice changed
+  }
+  prevItems = s.items;
+  prevDocs = s.docs;
+  prevRoots = s.rootDocIds;
+  prevCur = s.currentDocId;
+  prevPrefs = s.preferences;
   const state: PersistedState = {
     version: STATE_VERSION,
     items: s.items,
@@ -1305,6 +1426,13 @@ useStore.subscribe((s) => {
     currentDocId: s.currentDocId,
     preferences: s.preferences,
   };
-  persist(state);
+  persist(state); // always cache to IndexedDB
+  if (loadingFromFile) {
+    // This change came from loading the file — cache it but don't write it back.
+    loadingFromFile = false;
+    dirty = false;
+    return;
+  }
+  dirty = true;
   persistFile(state);
 });

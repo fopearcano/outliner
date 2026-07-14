@@ -112,6 +112,7 @@ export default function DocumentView() {
           </React.Fragment>
         ))}
         <div className="breadcrumb-spacer" />
+        <SyncChip />
         <FilterBar />
         <ViewOptions />
       </div>
@@ -305,6 +306,27 @@ function LrBlock({ id, depth, number }: { id: string; depth: number; number: num
         </div>
       </div>
     </div>
+  );
+}
+
+function SyncChip() {
+  const connected = useStore((s) => s.fileConnected);
+  const status = useStore((s) => s.syncStatus);
+  if (!connected && status !== 'conflict') return null;
+  const map: Record<string, { text: string; cls: string } | null> = {
+    off: null,
+    synced: { text: '☁ Synced', cls: 'ok' },
+    saving: { text: '☁ Saving…', cls: 'busy' },
+    loading: { text: '☁ Syncing…', cls: 'busy' },
+    conflict: { text: '⚠ Conflict', cls: 'warn' },
+    error: { text: '⚠ Save error', cls: 'warn' },
+  };
+  const s = map[status];
+  if (!s) return null;
+  return (
+    <span className={'sync-chip ' + s.cls} title="Connected data file — syncs across devices via your synced folder">
+      {s.text}
+    </span>
   );
 }
 
