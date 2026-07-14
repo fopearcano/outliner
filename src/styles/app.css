@@ -490,15 +490,16 @@
   max-width: 1400px;
 }
 .lanes {
-  --lane-w: 320px;
+  --lane-w: 460px;
   margin-top: 6px;
   overflow-x: auto;
   padding-bottom: 12px;
 }
+/* Exactly three fixed-width columns. The block never shrinks to fit the screen —
+   it keeps its width and scrolls horizontally instead, so text is never squeezed. */
 .lanes-inner {
   position: relative;
-  width: max-content;
-  min-width: 100%;
+  width: calc(var(--lane-w) * 3);
 }
 /* the two vertical column separators */
 .lane-guide {
