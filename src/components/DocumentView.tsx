@@ -181,8 +181,9 @@ export default function DocumentView() {
 // is offset with margin (never re-parented), so editing is never interrupted.
 // --------------------------------------------------------------------------
 function LaneBody({ rootId, rows }: { rootId: string; rows: { id: string; depth: number; number: number }[] }) {
+  const laneWidth = useStore((s) => s.preferences.laneWidth);
   return (
-    <div className="lanes">
+    <div className="lanes" style={{ ['--lane-w' as string]: `${laneWidth}px` }}>
       <div className="lanes-inner">
         <div className="lane-guide" style={{ left: 'var(--lane-w)' }} />
         <div className="lane-guide" style={{ left: 'calc(var(--lane-w) * 2)' }} />

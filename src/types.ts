@@ -172,6 +172,8 @@ export interface Preferences {
   navVisible: boolean;
   /** Whether the floating mindmap panel is open. */
   mindmapOpen: boolean;
+  /** Fixed column width (px) for the 3-column L-R view. */
+  laneWidth: number;
   /** Spellcheck inside the editor. */
   spellcheck: boolean;
 }
@@ -187,6 +189,7 @@ export const DEFAULT_PREFERENCES: Preferences = {
   sidebarVisible: true,
   navVisible: false,
   mindmapOpen: false,
+  laneWidth: 620,
   spellcheck: false,
 };
 

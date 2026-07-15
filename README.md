@@ -75,8 +75,9 @@ telemetry — your notes never leave the machine.
     sub-items. Toggling sides never interrupts editing.
   - **3-col L ↔ R** — the same idea across **three fixed-width columns** (left,
     main/centre, right): move any block between them with ◀ / ▶ (⌥ Alt for its
-    whole subtree). The columns keep a comfortable fixed width and the view
-    scrolls sideways on a narrow screen instead of shrinking or wrapping text.
+    whole subtree). Text keeps its width — the columns stay a fixed, comfortable
+    size (adjust it with the **Column width** slider in View) and the canvas
+    scrolls sideways instead of squeezing text into narrow columns.
 - **Navigation panel** (View → *Navigation panel*) — a collapsible right‑hand map
   of the whole document; click any row to scroll to & flash that bullet.
 - **Mindmap** (View → *Mindmap from outline*) — a floating, movable panel that

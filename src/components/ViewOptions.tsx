@@ -131,12 +131,26 @@ export default function ViewOptions() {
                 </p>
               )}
               {doc.settings.viewMode === 'lr3' && (
-                <p className="muted" style={{ margin: '8px 6px 0' }}>
-                  Three fixed-width columns — left, main (centre) and right. Move any
-                  block ◀ / ▶ between them independently, keeping its row and number.
-                  Hold <b>⌥ Alt</b> to move a block with its sub-items. Columns don't
-                  shrink — the view scrolls sideways on a narrow screen.
-                </p>
+                <>
+                  <p className="muted" style={{ margin: '8px 6px 6px' }}>
+                    Three fixed-width columns — left, main (centre) and right. Move any
+                    block ◀ / ▶ between them independently, keeping its row and number.
+                    Hold <b>⌥ Alt</b> to move a block with its sub-items. Text keeps its
+                    width — the view scrolls sideways instead of squeezing.
+                  </p>
+                  <div className="view-row static">
+                    <span>Column width</span>
+                    <input
+                      type="range"
+                      min={360}
+                      max={960}
+                      step={20}
+                      value={prefs.laneWidth}
+                      onChange={(e) => set({ laneWidth: Number(e.target.value) })}
+                    />
+                    <span className="view-val">{prefs.laneWidth}</span>
+                  </div>
+                </>
               )}
 
               <div className="view-sep" />

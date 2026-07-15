@@ -490,7 +490,7 @@
   max-width: 1400px;
 }
 .lanes {
-  --lane-w: 460px;
+  --lane-w: 620px; /* fallback; set live from the Column-width slider */
   margin-top: 6px;
   overflow-x: auto;
   padding-bottom: 12px;
