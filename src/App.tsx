@@ -4,7 +4,7 @@ import { readFiles } from './lib/attachments';
 import Sidebar from './components/Sidebar';
 import DocumentView from './components/DocumentView';
 import NavPanel from './components/NavPanel';
-import MindmapPanel from './components/MindmapPanel';
+import AnalyticalMap from './components/AnalyticalMap';
 import CommandPalette from './components/CommandPalette';
 import SearchPanel from './components/SearchPanel';
 import ShortcutHelp from './components/ShortcutHelp';
@@ -249,7 +249,7 @@ export default function App() {
         </main>
         {prefs.navVisible && <NavPanel />}
 
-        {prefs.mindmapOpen && <MindmapPanel />}
+        {prefs.graphOpen && <AnalyticalMap />}
         <FormatToolbar />
 
         <input

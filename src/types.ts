@@ -170,8 +170,8 @@ export interface Preferences {
   sidebarVisible: boolean;
   /** Whether the right-hand navigation (outline map) panel is open. */
   navVisible: boolean;
-  /** Whether the floating mindmap panel is open. */
-  mindmapOpen: boolean;
+  /** Whether the floating analytical-map (graph) panel is open. */
+  graphOpen: boolean;
   /** Fixed column width (px) for the 3-column L-R view. */
   laneWidth: number;
   /** Spellcheck inside the editor. */
@@ -188,7 +188,7 @@ export const DEFAULT_PREFERENCES: Preferences = {
   compact: false,
   sidebarVisible: true,
   navVisible: false,
-  mindmapOpen: false,
+  graphOpen: false,
   laneWidth: 620,
   spellcheck: false,
 };

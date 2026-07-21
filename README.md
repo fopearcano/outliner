@@ -80,10 +80,13 @@ telemetry — your notes never leave the machine.
     scrolls sideways instead of squeezing text into narrow columns.
 - **Navigation panel** (View → *Navigation panel*) — a collapsible right‑hand map
   of the whole document; click any row to scroll to & flash that bullet.
-- **Mindmap** (View → *Mindmap from outline*) — a floating, movable panel that
-  draws your outline as a left‑to‑right mindmap and updates live as you edit.
-  Drag its title bar to move it, drag the corner to resize, pan by dragging the
-  canvas, zoom with the scroll wheel, and click a node to jump to that bullet.
+- **Analytical map** (View → *Analytical map*) — a floating, Obsidian‑style
+  force‑directed graph of your outline's *connections*: bullets, `#tags`,
+  `@mentions` and documents, wired by `[[internal links]]`, tag membership and
+  document grouping. Node size grows with how connected a thing is; hover to
+  highlight its neighbours, drag nodes around, pan/zoom the canvas, and click a
+  node to jump to it (bullet), search it (tag) or open it (document). Toggle
+  tags / documents / orphans and scope to one document or all. Updates live.
 - **View options** popover: show/hide completed items, show/hide notes, compact
   spacing, font size, and per-document settings
 - **Collapsible sidebar** (`Ctrl/⌘+\`) for a distraction-free full-width outline

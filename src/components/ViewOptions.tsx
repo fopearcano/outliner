@@ -80,11 +80,11 @@ export default function ViewOptions() {
           <button
             className="view-row"
             onClick={() => {
-              set({ mindmapOpen: true });
+              set({ graphOpen: true });
               setOpen(false);
             }}
           >
-            <span>🧠 Mindmap from outline</span>
+            <span>🕸 Analytical map</span>
             <span className="view-cta">open</span>
           </button>
 
