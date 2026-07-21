@@ -10,22 +10,24 @@ import type { Doc } from '../types';
 import { COLOR_HEX } from '../types';
 import type { ItemMap } from './tree';
 import { plainText } from './markdown';
+import { TAG_RE } from './tags';
 
-const TAG_RE = /(?<!\S)([#@][\p{L}\p{N}_\-/]+)/gu;
 const LINK_RE = /\[\[([^\]]+?)\]\]/g;
 
-export type GNodeType = 'doc' | 'bullet' | 'tag' | 'mention';
+export type GNodeType = 'doc' | 'bullet' | 'tag';
 export type GEdgeKind = 'link' | 'tag' | 'doc';
 
 export interface GNode {
   id: string;
   type: GNodeType;
   label: string;
-  /** item id (bullet/doc) or the raw "#tag"/"@mention". */
+  /** item id (bullet/doc) or the raw sigil tag ("#tag", "§section", …). */
   ref: string;
   docId?: string;
   /** color-label hex for bullets that carry one. */
   color?: string | null;
+  /** leading sigil for tag nodes (#/@/§/&/%/$/£) — drives node colour. */
+  sigil?: string;
   degree: number;
 }
 
@@ -109,7 +111,7 @@ export function buildGraph(items: ItemMap, docs: Record<string, Doc>, opts: Grap
   const ensureTag = (tag: string): string => {
     const id = 't:' + tag.toLowerCase();
     if (!nodeMap.has(id)) {
-      nodeMap.set(id, { id, type: tag[0] === '@' ? 'mention' : 'tag', label: tag, ref: tag, degree: 0 });
+      nodeMap.set(id, { id, type: 'tag', label: tag, ref: tag, sigil: tag[0], degree: 0 });
     }
     return id;
   };
@@ -130,16 +132,17 @@ export function buildGraph(items: ItemMap, docs: Record<string, Doc>, opts: Grap
       }
     }
 
-    // #tags / @mentions → bullet↔tag edges
+    // sigil tags (#tag @mention § & % $ £) → bullet↔tag edges
     if (opts.tags) {
       TAG_RE.lastIndex = 0;
       let tm: RegExpExecArray | null;
       const seen = new Set<string>();
       while ((tm = TAG_RE.exec(it.text))) {
-        const key = tm[1].toLowerCase();
+        const full = tm[0]; // sigil + name
+        const key = full.toLowerCase();
         if (seen.has(key)) continue;
         seen.add(key);
-        edges.push({ source: ensureBullet(it.id), target: ensureTag(tm[1]), kind: 'tag' });
+        edges.push({ source: ensureBullet(it.id), target: ensureTag(full), kind: 'tag' });
       }
     }
   }

@@ -5,6 +5,7 @@
 // ---------------------------------------------------------------------------
 import React from 'react';
 import { relativeLabel, parseDateToken, isOverdue } from './dates';
+import { TAG_RE_SINGLE, tagClass, tagLabel } from './tags';
 
 export interface RenderOpts {
   onTag?: (tag: string) => void;
@@ -34,8 +35,8 @@ const RULES: Rule[] = [
   { name: 'ilink', re: /\[\[([^\]]+?)\]\]/ },
   { name: 'link', re: /\[([^\]]*?)\]\((https?:\/\/[^)]+|\/[^)]*)\)/ },
   { name: 'date', re: /!\(([^)]+?)\)/ },
-  { name: 'tag', re: /(?<!\S)#([\p{L}\p{N}_\-/]+)/u },
-  { name: 'mention', re: /(?<!\S)@([\p{L}\p{N}_\-/]+)/u },
+  // #tag @mention § & % $ £ — a sigil + word, each colour-coded (see lib/tags).
+  { name: 'tag', re: TAG_RE_SINGLE },
   { name: 'url', re: /(?<!\S)(https?:\/\/[^\s)]+)/ },
 ];
 
@@ -141,34 +142,23 @@ function renderToken(
           {inner}
         </a>
       );
-    case 'tag':
+    case 'tag': {
+      const full = (m[1] ?? '') + (m[2] ?? ''); // sigil + name
       return (
         <span
           key={key}
-          className="md-tag"
+          className={tagClass(full)}
+          title={tagLabel(full)}
           onMouseDown={(e) => {
             e.preventDefault();
             e.stopPropagation();
-            opts.onTag?.('#' + inner);
+            opts.onTag?.(full);
           }}
         >
-          #{inner}
+          {full}
         </span>
       );
-    case 'mention':
-      return (
-        <span
-          key={key}
-          className="md-mention"
-          onMouseDown={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            opts.onTag?.('@' + inner);
-          }}
-        >
-          @{inner}
-        </span>
-      );
+    }
     case 'dot':
       return (
         <span

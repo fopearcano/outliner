@@ -25,8 +25,12 @@ export default function ShortcutHelp({ onClose }: { onClose: () => void }) {
       </div>
       <div className="help-foot">
         Also try inline markdown: <code>**bold**</code> <code>*italic*</code> <code>~~strike~~</code>{' '}
-        <code>`code`</code> <code>==highlight==</code> <code>#tag</code> <code>@mention</code>{' '}
-        <code>[[link]]</code> <code>!(2026-07-10)</code>
+        <code>`code`</code> <code>==highlight==</code> <code>[[link]]</code>{' '}
+        <code>!(2026-07-10)</code>
+        <br />
+        Tag sigils (each its own colour, all searchable & mapped): <code>#tag</code>{' '}
+        <code>@mention</code> <code>§section</code> <code>&link</code> <code>%motif</code>{' '}
+        <code>$object</code> <code>£stake</code>
       </div>
     </Modal>
   );

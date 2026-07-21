@@ -26,9 +26,16 @@ telemetry — your notes never leave the machine.
 
 ### Rich inline markdown (color‑coded like syntax tokens)
 `**bold**` · `*italic*` · `~~strike~~` · `` `code` `` · `==highlight==` ·
-`[label](url)` · `#tag` · `@mention` · `[[internal link]]` · `!(2026-07-10)` dates ·
+`[label](url)` · `[[internal link]]` · `!(2026-07-10)` dates ·
 `.word` (fuchsia) · standalone `-` / `*` markers (carmine)
 
+- **Sigil tags** — seven colour‑coded families of tag, tuned for outlining and
+  creative writing. Each is clickable, collected into the tag pane, searchable,
+  and plotted on the analytical map:
+  `#tag` (blue) · `@mention` (yellow) · `§section` (green) · `&link` (orange) ·
+  `%motif` (purple) · `$object` (teal) · `£stake` (pink).
+  A sigil only tags when it starts a word (leading space / line start), so
+  `50%` and `R&D` stay plain text while `%plot`, `&bond` and `$sword` tag.
 - **#tags** and **@mentions** are clickable and collected into a tag pane
 - **[[internal links]]** jump to another bullet **by its exact text** — click one
   and it scrolls to & flashes the target (which can be in any document); if no

@@ -207,22 +207,47 @@ kbd {
   border-radius: 3px;
   padding: 0 2px;
 }
+/* Sigil tags — one colour per sigil (see src/lib/tags.ts). */
+.md-tag,
+.md-mention,
+.md-sec,
+.md-amp,
+.md-pct,
+.md-dol,
+.md-gbp {
+  cursor: pointer;
+  font-weight: 500;
+}
+.md-tag:hover,
+.md-mention:hover,
+.md-sec:hover,
+.md-amp:hover,
+.md-pct:hover,
+.md-dol:hover,
+.md-gbp:hover {
+  text-decoration: underline;
+}
 .md-tag {
   color: var(--tok-blue);
-  cursor: pointer;
-  font-weight: 500;
-}
-.md-tag:hover {
-  text-decoration: underline;
-}
+} /* #tag */
 .md-mention {
   color: var(--tok-yellow);
-  cursor: pointer;
-  font-weight: 500;
-}
-.md-mention:hover {
-  text-decoration: underline;
-}
+} /* @mention */
+.md-sec {
+  color: var(--tok-green);
+} /* §section */
+.md-amp {
+  color: var(--tok-orange);
+} /* &link */
+.md-pct {
+  color: var(--tok-purple);
+} /* %motif */
+.md-dol {
+  color: var(--tok-teal);
+} /* $object */
+.md-gbp {
+  color: var(--tok-pink);
+} /* £stake */
 .md-date {
   color: var(--tok-purple);
   cursor: pointer;

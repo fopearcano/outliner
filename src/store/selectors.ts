@@ -4,15 +4,14 @@
 import type { OutlineItem, Doc } from '../types';
 import type { ItemMap } from '../lib/tree';
 import { plainText } from '../lib/markdown';
-
-const TAG_RE = /(?<!\S)([#@][\p{L}\p{N}_\-/]+)/gu;
+import { TAG_RE } from '../lib/tags';
 
 export interface TagCount {
   tag: string;
   count: number;
 }
 
-/** Collect every #tag and @mention across all items with usage counts. */
+/** Collect every sigil tag (#tag @mention § & % $ £) with usage counts. */
 export function collectTags(items: ItemMap): TagCount[] {
   const counts = new Map<string, number>();
   for (const item of Object.values(items)) {
@@ -20,7 +19,7 @@ export function collectTags(items: ItemMap): TagCount[] {
     TAG_RE.lastIndex = 0;
     let m: RegExpExecArray | null;
     while ((m = TAG_RE.exec(text))) {
-      const tag = m[1];
+      const tag = m[0]; // full "sigil+name"
       counts.set(tag, (counts.get(tag) ?? 0) + 1);
     }
   }

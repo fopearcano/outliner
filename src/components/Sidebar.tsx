@@ -5,6 +5,7 @@ import React, { useMemo, useRef, useState } from 'react';
 import { useStore } from '../store/store';
 import { useUi } from './ui-context';
 import { collectTags } from '../store/selectors';
+import { tagColor, tagLabel } from '../lib/tags';
 
 export default function Sidebar() {
   const rootDocIds = useStore((s) => s.rootDocIds);
@@ -121,7 +122,9 @@ export default function Sidebar() {
                 {tags.map((t) => (
                   <button
                     key={t.tag}
-                    className={'tag-chip ' + (t.tag[0] === '@' ? 'mention' : 'hash')}
+                    className="tag-chip"
+                    style={{ color: tagColor(t.tag) }}
+                    title={`${tagLabel(t.tag)} · ${t.count} use${t.count === 1 ? '' : 's'}`}
                     onClick={() => ui.onTag(t.tag)}
                   >
                     {t.tag}

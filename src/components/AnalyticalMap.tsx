@@ -8,6 +8,7 @@ import { useEffect, useMemo, useReducer, useRef, useState } from 'react';
 import { useStore } from '../store/store';
 import { useUi } from './ui-context';
 import { buildGraph, type GNode, type GEdge } from '../lib/graph';
+import { TAG_COLOR } from '../lib/tags';
 
 interface P {
   x: number;
@@ -32,9 +33,8 @@ function radius(n: GNode): number {
   return base + Math.min(13, Math.sqrt(n.degree) * 2.1);
 }
 function nodeFill(n: GNode): string {
-  if (n.type === 'tag') return 'var(--tok-blue)';
-  if (n.type === 'mention') return 'var(--tok-yellow)';
-  if (n.type === 'doc') return 'var(--tok-purple)';
+  if (n.type === 'tag') return TAG_COLOR[n.sigil ?? '#'] ?? 'var(--tok-blue)';
+  if (n.type === 'doc') return 'var(--text-bright)';
   if (n.color) return n.color;
   return `hsl(${hueFor(n.docId || 'x')}, 42%, 56%)`;
 }
@@ -429,7 +429,12 @@ export default function AnalyticalMap() {
                   >
                     <circle className="g-dot" r={r} style={{ fill: nodeFill(n) }} />
                     {showLabel && (
-                      <text className="g-label" x={r + 3} y={4}>
+                      <text
+                        className="g-label"
+                        x={r + 3}
+                        y={4}
+                        style={n.type !== 'bullet' ? { fill: nodeFill(n) } : undefined}
+                      >
                         {n.type === 'bullet' && n.label.length > 26 ? n.label.slice(0, 25) + '…' : n.label}
                       </text>
                     )}

@@ -1849,14 +1849,8 @@ textarea.node-note {
 .g-node.hot .g-label {
   fill: var(--text-bright);
 }
-.g-node.tag .g-label {
-  fill: var(--tok-blue);
-}
-.g-node.mention .g-label {
-  fill: var(--tok-yellow);
-}
+/* tag / doc label colours are set inline from nodeFill() (per-sigil hue). */
 .g-node.doc .g-label {
-  fill: var(--tok-purple);
   font-weight: 600;
 }
 .graph-empty {
