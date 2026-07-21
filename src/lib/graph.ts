@@ -53,13 +53,6 @@ export interface Graph {
 const NODE_CAP = 700; // keep the sim smooth on huge outlines
 
 export function buildGraph(items: ItemMap, docs: Record<string, Doc>, opts: GraphOpts): Graph {
-  // Resolve [[title]] → item id (first exact plain-text match wins).
-  const titleMap = new Map<string, string>();
-  for (const it of Object.values(items)) {
-    const t = plainText(it.text).trim().toLowerCase();
-    if (t && !titleMap.has(t)) titleMap.set(t, it.id);
-  }
-
   const rootToDoc = new Map<string, string>();
   for (const d of Object.values(docs)) if (d.rootItemId) rootToDoc.set(d.rootItemId, d.id);
   const docCache = new Map<string, string | null>();
@@ -80,6 +73,19 @@ export function buildGraph(items: ItemMap, docs: Record<string, Doc>, opts: Grap
     return null;
   };
   const inScope = (itemId: string) => !opts.scopeDocId || docIdOf(itemId) === opts.scopeDocId;
+
+  // Resolve [[title]] → item id. Only in-scope items are candidates (so a
+  // same-titled bullet in another document can't capture the slot when scoped),
+  // and a bullet whose text is *only* link tokens (e.g. "[[Foo]]") is skipped —
+  // it's an alias/reference, not a real target, and its plainText would collide
+  // with the very title it points at.
+  const titleMap = new Map<string, string>();
+  for (const it of Object.values(items)) {
+    if (!it.parent || !inScope(it.id)) continue;
+    if (!it.text.replace(/\[\[[^\]]+?\]\]/g, '').trim()) continue; // pure-link bullet
+    const t = plainText(it.text).trim().toLowerCase();
+    if (t && !titleMap.has(t)) titleMap.set(t, it.id);
+  }
 
   const nodeMap = new Map<string, GNode>();
   const edges: GEdge[] = [];
@@ -112,12 +118,14 @@ export function buildGraph(items: ItemMap, docs: Record<string, Doc>, opts: Grap
     if (!it.parent) continue; // skip hidden document-root items
     if (!inScope(it.id)) continue;
 
-    // [[internal links]] → bullet↔bullet edges
+    // [[internal links]] → bullet↔bullet edges (de-duplicated per bullet)
     LINK_RE.lastIndex = 0;
     let lm: RegExpExecArray | null;
+    const seenLinks = new Set<string>();
     while ((lm = LINK_RE.exec(it.text))) {
       const targetId = titleMap.get(lm[1].trim().toLowerCase());
-      if (targetId && targetId !== it.id && inScope(targetId)) {
+      if (targetId && targetId !== it.id && inScope(targetId) && !seenLinks.has(targetId)) {
+        seenLinks.add(targetId);
         edges.push({ source: ensureBullet(it.id), target: ensureBullet(targetId), kind: 'link' });
       }
     }
@@ -155,12 +163,15 @@ export function buildGraph(items: ItemMap, docs: Record<string, Doc>, opts: Grap
   }
 
   let nodes = [...nodeMap.values()];
-  const deg = new Map<string, number>();
-  for (const e of edges) {
-    deg.set(e.source, (deg.get(e.source) ?? 0) + 1);
-    deg.set(e.target, (deg.get(e.target) ?? 0) + 1);
-  }
-  for (const n of nodes) n.degree = deg.get(n.id) ?? 0;
+  const countDegrees = (ns: GNode[], es: GEdge[]) => {
+    const deg = new Map<string, number>();
+    for (const e of es) {
+      deg.set(e.source, (deg.get(e.source) ?? 0) + 1);
+      deg.set(e.target, (deg.get(e.target) ?? 0) + 1);
+    }
+    for (const n of ns) n.degree = deg.get(n.id) ?? 0;
+  };
+  countDegrees(nodes, edges);
 
   let truncated = 0;
   let keptEdges = edges;
@@ -175,6 +186,7 @@ export function buildGraph(items: ItemMap, docs: Record<string, Doc>, opts: Grap
     truncated = nodes.length - keep.size;
     nodes = nodes.filter((n) => keep.has(n.id));
     keptEdges = edges.filter((e) => keep.has(e.source) && keep.has(e.target));
+    countDegrees(nodes, keptEdges); // degrees must reflect the kept edges only
   }
 
   return { nodes, edges: keptEdges, truncated };

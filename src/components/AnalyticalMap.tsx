@@ -19,8 +19,8 @@ interface P {
 }
 
 const REPULSION = 2600;
-const AL_MIN = 0.03;
-const AL_DECAY = 0.985;
+const AL_MIN = 0.04;
+const AL_DECAY = 0.98;
 
 function hueFor(s: string): number {
   let h = 0;
@@ -70,7 +70,9 @@ export default function AnalyticalMap() {
   edgesRef.current = edges;
   const alphaRef = useRef(0);
   const rafRef = useRef(0);
-  const seedRef = useRef(0);
+  const runningRef = useRef(false);
+  const nodeEls = useRef<Map<string, SVGGElement>>(new Map());
+  const edgeEls = useRef<(SVGLineElement | null)[]>([]);
   const [, tickRender] = useReducer((x) => x + 1, 0);
 
   // Structural signature — reheat only when the node set / edge count changes,
@@ -137,12 +139,36 @@ export default function AnalyticalMap() {
     alphaRef.current = a * AL_DECAY;
   };
 
+  // Animate imperatively: the RAF loop writes positions straight to the SVG
+  // attributes (no React reconciliation per frame — that would storm at scale).
+  const paint = () => {
+    const m = posRef.current;
+    for (const [id, el] of nodeEls.current) {
+      const p = m.get(id);
+      if (p && el) el.setAttribute('transform', `translate(${p.x},${p.y})`);
+    }
+    const es = edgesRef.current;
+    for (let i = 0; i < es.length; i++) {
+      const el = edgeEls.current[i];
+      if (!el) continue;
+      const p = m.get(es[i].source);
+      const q = m.get(es[i].target);
+      if (!p || !q) continue;
+      el.setAttribute('x1', String(p.x));
+      el.setAttribute('y1', String(p.y));
+      el.setAttribute('x2', String(q.x));
+      el.setAttribute('y2', String(q.y));
+    }
+  };
+
   const runLoop = () => {
     cancelAnimationFrame(rafRef.current);
+    runningRef.current = true;
     const step = () => {
       tick();
-      tickRender();
+      paint();
       if (alphaRef.current > AL_MIN) rafRef.current = requestAnimationFrame(step);
+      else runningRef.current = false;
     };
     rafRef.current = requestAnimationFrame(step);
   };
@@ -152,15 +178,29 @@ export default function AnalyticalMap() {
     const m = posRef.current;
     const ids = new Set(nodes.map((n) => n.id));
     for (const id of [...m.keys()]) if (!ids.has(id)) m.delete(id);
+    // Seed new nodes around the centroid of the existing ones (so freshly added
+    // nodes appear near the graph, not ever-farther away over the session).
+    let cx = 0, cy = 0, cn = 0;
+    for (const p of m.values()) {
+      cx += p.x;
+      cy += p.y;
+      cn++;
+    }
+    if (cn) {
+      cx /= cn;
+      cy /= cn;
+    }
+    let k = 0;
     for (const n of nodes) {
       if (!m.has(n.id)) {
-        const i = seedRef.current++;
-        const ang = i * 2.399963229;
-        const r = 16 * Math.sqrt(i + 1);
-        m.set(n.id, { x: Math.cos(ang) * r, y: Math.sin(ang) * r, vx: 0, vy: 0 });
+        const ang = k * 2.399963229;
+        const r = 22 * Math.sqrt(k + 1);
+        m.set(n.id, { x: cx + Math.cos(ang) * r, y: cy + Math.sin(ang) * r, vx: 0, vy: 0 });
+        k++;
       }
     }
     alphaRef.current = 1;
+    tickRender(); // materialize new/removed SVG elements, then animate imperatively
     runLoop();
     return () => cancelAnimationFrame(rafRef.current);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -184,7 +224,7 @@ export default function AnalyticalMap() {
   const bodyRef = useRef<HTMLDivElement>(null);
   const [view, setView] = useState({ tx: 300, ty: 220, k: 1 });
   const panning = useRef<{ x: number; y: number; tx: number; ty: number } | null>(null);
-  const drag = useRef<{ id: string; moved: boolean } | null>(null);
+  const drag = useRef<{ id: string; sx: number; sy: number; moved: boolean } | null>(null);
   const [hover, setHover] = useState<string | null>(null);
 
   const toGraph = (clientX: number, clientY: number) => {
@@ -223,28 +263,27 @@ export default function AnalyticalMap() {
     const nodeEl = (e.target as HTMLElement).closest('.g-node') as HTMLElement | null;
     (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
     if (nodeEl?.dataset.id) {
-      drag.current = { id: nodeEl.dataset.id, moved: false };
-      const p = posRef.current.get(nodeEl.dataset.id);
-      if (p) {
-        const g = toGraph(e.clientX, e.clientY);
-        p.fx = g.x;
-        p.fy = g.y;
-      }
-      alphaRef.current = Math.max(alphaRef.current, 0.4);
-      runLoop();
+      // Don't pin/reheat yet — wait to see if this is a click or a drag.
+      drag.current = { id: nodeEl.dataset.id, sx: e.clientX, sy: e.clientY, moved: false };
     } else {
       panning.current = { x: e.clientX, y: e.clientY, tx: view.tx, ty: view.ty };
       (e.currentTarget as HTMLElement).style.cursor = 'grabbing';
     }
   };
   const onMove = (e: React.PointerEvent) => {
-    if (drag.current) {
-      drag.current.moved = true;
-      const p = posRef.current.get(drag.current.id);
-      if (p) {
-        const g = toGraph(e.clientX, e.clientY);
-        p.fx = g.x;
-        p.fy = g.y;
+    const d = drag.current;
+    if (d) {
+      if (!d.moved && Math.hypot(e.clientX - d.sx, e.clientY - d.sy) > 4) d.moved = true;
+      if (d.moved) {
+        const p = posRef.current.get(d.id);
+        if (p) {
+          const g = toGraph(e.clientX, e.clientY);
+          p.fx = g.x;
+          p.fy = g.y;
+        }
+        // keep the sim warm so the node tracks the cursor (even after it cooled)
+        alphaRef.current = Math.max(alphaRef.current, 0.25);
+        if (!runningRef.current) runLoop();
       }
       return;
     }
@@ -253,17 +292,20 @@ export default function AnalyticalMap() {
     }
   };
   const onUp = (e: React.PointerEvent) => {
-    if (drag.current) {
-      const { id, moved } = drag.current;
-      const p = posRef.current.get(id);
-      if (p) {
-        p.fx = null;
-        p.fy = null;
+    const d = drag.current;
+    if (d) {
+      if (d.moved) {
+        const p = posRef.current.get(d.id);
+        if (p) {
+          p.fx = null;
+          p.fy = null;
+        }
+        alphaRef.current = Math.max(alphaRef.current, 0.2);
+        if (!runningRef.current) runLoop();
+      } else {
+        fireNode(d.id); // a click, not a drag
       }
       drag.current = null;
-      if (!moved) fireNode(id);
-      alphaRef.current = Math.max(alphaRef.current, 0.2);
-      runLoop();
     }
     panning.current = null;
     (e.currentTarget as HTMLElement).style.cursor = '';
@@ -355,6 +397,9 @@ export default function AnalyticalMap() {
                 return (
                   <line
                     key={i}
+                    ref={(el) => {
+                      edgeEls.current[i] = el;
+                    }}
                     className={'g-edge ' + e.kind + (lit ? ' lit' : '') + (faded ? ' faded' : '')}
                     x1={p.x}
                     y1={p.y}
@@ -372,6 +417,10 @@ export default function AnalyticalMap() {
                 return (
                   <g
                     key={n.id}
+                    ref={(el) => {
+                      if (el) nodeEls.current.set(n.id, el);
+                      else nodeEls.current.delete(n.id);
+                    }}
                     className={'g-node ' + n.type + (dim(n.id) ? ' dim' : '') + (n.id === hover ? ' hot' : '')}
                     data-id={n.id}
                     transform={`translate(${p.x},${p.y})`}
